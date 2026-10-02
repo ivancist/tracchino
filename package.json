@@ -17,11 +17,13 @@
     "db:migrate:remote": "wrangler d1 migrations apply tracchino --remote"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.104.1",
     "drizzle-orm": "^0.45.3",
     "hono": "^4.13.12",
     "jose": "^6.2.12",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-router": "^8.4.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

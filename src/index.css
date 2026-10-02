@@ -6,9 +6,16 @@
   --card: #ffffff;
   --border: #dcdad2;
   --accent: #2f6b3a;
+  --accent-fg: #ffffff;
+  --accent-soft: #e3efe4;
   --error: #b3261e;
+  --error-soft: #fbe9e7;
+  --radius: 0.75rem;
+  --tap: 2.75rem; /* 44px touch targets */
+  --tabbar-h: 3.5rem;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.5;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,7 +26,10 @@
     --card: #20231f;
     --border: #353a33;
     --accent: #7fbf8a;
+    --accent-fg: #10210f;
+    --accent-soft: #24352a;
     --error: #f2b8b5;
+    --error-soft: #3a1f1d;
   }
 }
 
@@ -33,22 +43,102 @@ body {
   color: var(--fg);
 }
 
+/* ---------- layout ---------- */
 .page {
-  max-width: 40rem;
+  max-width: 44rem;
   margin: 0 auto;
-  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  padding: max(0.75rem, env(safe-area-inset-top)) 1rem calc(var(--tabbar-h) + 6rem + env(safe-area-inset-bottom));
 }
 
-h1 {
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.page-header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.4rem;
   color: var(--accent);
-  margin: 0.5rem 0 1rem;
+  overflow-wrap: anywhere;
+}
+
+.back {
+  font-size: 2rem;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--fg);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  display: grid;
+  place-items: center;
+}
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  min-height: var(--tabbar-h);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.tab.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 0.75rem 1rem;
+  background: var(--error-soft);
+  color: var(--error);
+  text-align: center;
+}
+
+/* ---------- typography & utilities ---------- */
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.right {
+  text-align: right;
+}
+
+.error {
+  color: var(--error);
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem 0;
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius);
   padding: 1rem;
+  margin-top: 1.5rem;
 }
 
 .card h2 {
@@ -72,6 +162,346 @@ dd {
   overflow-wrap: anywhere;
 }
 
-.error {
+/* ---------- controls ---------- */
+.button {
+  min-height: var(--tap);
+  padding: 0 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.button.danger {
   color: var(--error);
+  border-color: var(--error);
+}
+
+.button.wide {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.icon-button {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--card);
+  color: var(--fg);
+  /* 16px prevents iOS from zooming on focus */
+  font: inherit;
+  font-size: 1rem;
+}
+
+.input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.search {
+  margin-bottom: 1rem;
+}
+
+/* ---------- forms ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.row > .field {
+  flex: 1 1 10rem;
+}
+
+.grid-2,
+.grid-3 {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.details summary {
+  cursor: pointer;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+}
+
+.details[open] > :not(summary) {
+  margin-top: 0.5rem;
+}
+
+/* ---------- lists ---------- */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.list > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  min-height: var(--tap);
+  color: inherit;
+  text-decoration: none;
+}
+
+.day {
+  margin-bottom: 1.25rem;
+}
+
+.groups {
+  margin-top: 2rem;
+}
+
+/* A <button> styled as a list row */
+.list-item.plain {
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.day-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+
+/* ---------- receipt editor ---------- */
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.line {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.line.invalid {
+  border-color: var(--error);
+}
+
+.line-head {
+  display: flex;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.line-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+}
+
+.line-info:empty {
+  display: none;
+}
+
+.savebar {
+  position: fixed;
+  inset: auto 0 calc(var(--tabbar-h) + env(safe-area-inset-bottom)) 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  z-index: 9;
+}
+
+.savebar > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.savebar strong {
+  font-size: 1.25rem;
+}
+
+/* ---------- combobox ---------- */
+.combobox {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.options {
+  position: absolute;
+  inset: calc(100% + 2px) 0 auto 0;
+  z-index: 30;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  min-height: var(--tap);
+  cursor: pointer;
+}
+
+.option.active {
+  background: var(--accent-soft);
+}
+
+.option.create {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ---------- dialog ---------- */
+.dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 1rem;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.danger-zone h2 {
+  font-size: 1rem;
+}
+
+@media (max-width: 380px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

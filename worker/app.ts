@@ -1,20 +1,35 @@
 import { Hono } from "hono";
-import { accessAuth, remoteKeySet, type AuthVariables, type KeySetFactory } from "./middleware/auth";
+import { toHttpError } from "./http";
+import { accessAuth, remoteKeySet, sameOriginOnly, type AuthVariables, type KeySetFactory } from "./middleware/auth";
+import { chainRoutes } from "./routes/chains";
+import { groupRoutes } from "./routes/groups";
 import { meRoutes } from "./routes/me";
+import { productRoutes } from "./routes/products";
+import { receiptRoutes } from "./routes/receipts";
+import { storeRoutes } from "./routes/stores";
 
 export type AppEnv = { Bindings: Env; Variables: AuthVariables };
 
 export function createApp(options: { keySet?: KeySetFactory } = {}) {
   const app = new Hono<AppEnv>().basePath("/api");
 
-  // Must stay first: every /api route is authenticated.
+  // Must stay first: no cross-site writes, and every /api route is authenticated.
+  app.use("*", sameOriginOnly());
   app.use("*", accessAuth(options.keySet ?? remoteKeySet));
 
   app.route("/me", meRoutes);
+  app.route("/chains", chainRoutes);
+  app.route("/stores", storeRoutes);
+  app.route("/groups", groupRoutes);
+  app.route("/products", productRoutes);
+  app.route("/receipts", receiptRoutes);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
-    console.error("unhandled error", err);
+    const httpError = toHttpError(err);
+    if (httpError) return c.json(httpError.body, httpError.status);
+    // Message only: the full error can carry SQL and bound values into Workers logs.
+    console.error(`unhandled error on ${c.req.method} ${c.req.path}:`, err instanceof Error ? err.message.slice(0, 200) : "unknown");
     return c.json({ error: "internal_error" }, 500);
   });
 

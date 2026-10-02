@@ -66,3 +66,21 @@ export function accessAuth(getKeySet: KeySetFactory = remoteKeySet): MiddlewareH
     return next();
   };
 }
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * CSRF guard for state-changing requests: a browser always sends `Sec-Fetch-Site` and/or `Origin`;
+ * reject when they say the request comes from another site. Requests without both headers (curl, tests)
+ * are not browser-driven and still need a valid Access token (or local dev bypass).
+ */
+export function sameOriginOnly(): MiddlewareHandler {
+  return async (c, next) => {
+    if (SAFE_METHODS.has(c.req.method)) return next();
+    const site = c.req.header("Sec-Fetch-Site");
+    const origin = c.req.header("Origin");
+    const crossSite = site != null ? site !== "same-origin" && site !== "none" : origin != null && origin !== new URL(c.req.url).origin;
+    if (crossSite) return c.json({ error: "unauthorized", message: "Richiesta da un'altra origine" }, 403);
+    return next();
+  };
+}

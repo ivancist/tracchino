@@ -74,7 +74,14 @@ diary_entries     id, date, meal ('colazione'|'pranzo'|'cena'|'snack'),
 
 Valori derivati, calcolati dalle query e non salvati:
 - **€/kg (o €/l)** = `price_paid / amount`. **€/pezzo** = `price_paid / pieces`.
-- Se manca `amount` ma ci sono `pieces` e `package_amount` o `avg_piece_amount`, la quantità si stima e viene segnalata come "stimata".
+- Quantità della riga (`shared/pricing.ts`, fissata dai test):
+  - `amount` inserito → **misurata**;
+  - `pieces` × `package_amount` → **confezione**: è esatta, non stimata (2 × pasta 500 g = 1 kg);
+  - `package_amount` senza `pieces` → si assume 1 confezione ed è **stimata** (nella UI "≈"): se ne hai comprate 2 e non lo scrivi, il €/kg risulta dimezzato;
+  - `pieces` × `avg_piece_amount` → **stimata** (6 banane × ~120 g);
+  - altrimenti la quantità è sconosciuta (`null`, mai 0).
+  - Con `package_amount` e `avg_piece_amount` entrambi presenti vince la confezione.
+  - Le aggregazioni (Fase 2) partono da prezzo pagato e quantità grezzi, non dai €/kg già arrotondati.
 - **Costo per grammo di un prodotto** (per il diario): media ponderata degli acquisti degli ultimi N giorni, con l'ultimo prezzo pagato come alternativa (impostabile).
 
 Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due città stampa le stesse abbreviazioni.
@@ -96,6 +103,12 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 - Creazione di un nuovo prodotto direttamente dalla riga.
 - Il totale si aggiorna man mano. Elenco degli scontrini con modifica ed eliminazione.
 - UI pensata prima per il telefono (tastiera numerica, target grandi), usabile anche da desktop.
+- Decisioni (2026-10-02):
+  - "Unisci duplicati" vale per i **prodotti** (unità diverse non si uniscono). Catene e negozi hanno nomi univoci e si rinominano; per spostare uno scontrino su un altro negozio lo si modifica. L'unione di negozi verrà aggiunta solo se serve.
+  - I gruppi si creano dal form prodotto e si rinominano o eliminano in fondo alla pagina Prodotti.
+  - Le righe completamente vuote vengono ignorate. Il totale conta solo le righe complete e segnala quelle escluse.
+  - Il prezzo si precompila con l'ultimo pagato in quel negozio (escluso lo scontrino in modifica).
+  - Sicurezza: le scritture sono accettate solo dalla stessa origine (`Sec-Fetch-Site`/`Origin`), solo con `Content-Type: application/json`, fino a 256 KB.
 - **Verifiche**: test sul calcolo di `price_paid`, €/kg ed €/pezzo (compresi i casi con quantità mancanti o stimate); test delle route CRUD (input non valido → 400); un e2e "crea uno scontrino con 3 righe → compare nell'elenco con il totale giusto".
 
 ### Fase 2 — Statistiche spesa (le stesse del foglio Google)

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnySQLiteColumn,
   check,
   index,
   integer,
@@ -8,9 +9,14 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { PRODUCT_UNITS } from "../shared/types";
 
 // Conventions: money in integer cents, quantities in integer grams/millilitres,
 // dates as ISO `YYYY-MM-DD` text, unknown values NULL (never 0).
+
+// SQLite has no date type: enforce the `YYYY-MM-DD` shape (calendar validity is checked by Zod).
+const isoDateCheck = (name: string, column: AnySQLiteColumn) =>
+  check(name, sql`${column} GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'`);
 
 const createdAt = () =>
   integer("created_at", { mode: "timestamp_ms" })
@@ -35,7 +41,10 @@ export const stores = sqliteTable(
     vatNumber: text("vat_number"),
     createdAt: createdAt(),
   },
-  (t) => [index("stores_chain_idx").on(t.chainId), index("stores_vat_idx").on(t.vatNumber)],
+  (t) => [
+    uniqueIndex("stores_chain_name_uq").on(t.chainId, t.name),
+    index("stores_vat_idx").on(t.vatNumber),
+  ],
 );
 
 export const productGroups = sqliteTable("product_groups", {
@@ -44,7 +53,6 @@ export const productGroups = sqliteTable("product_groups", {
   createdAt: createdAt(),
 });
 
-export const PRODUCT_UNITS = ["g", "ml", "pz"] as const;
 export const NUTRITION_SOURCES = ["off", "manual"] as const;
 
 export const products = sqliteTable(
@@ -71,6 +79,7 @@ export const products = sqliteTable(
     check("products_unit_chk", sql`${t.unit} in ('g', 'ml', 'pz')`),
     check("products_package_amount_chk", sql`${t.packageAmount} is null or ${t.packageAmount} > 0`),
     check("products_avg_piece_chk", sql`${t.avgPieceAmount} is null or ${t.avgPieceAmount} > 0`),
+    check("products_nutrition_source_chk", sql`${t.nutritionSource} is null or ${t.nutritionSource} in ('off', 'manual')`),
   ],
 );
 
@@ -114,6 +123,8 @@ export const receipts = sqliteTable(
     index("receipts_date_idx").on(t.date),
     index("receipts_store_idx").on(t.storeId),
     check("receipts_source_chk", sql`${t.source} in ('manual', 'scan')`),
+    isoDateCheck("receipts_date_chk", t.date),
+    check("receipts_total_chk", sql`${t.totalPrintedCents} is null or ${t.totalPrintedCents} >= 0`),
   ],
 );
 
@@ -139,6 +150,8 @@ export const receiptItems = sqliteTable(
     index("receipt_items_product_idx").on(t.productId),
     check("receipt_items_paid_chk", sql`${t.pricePaidCents} = ${t.priceFullCents} - ${t.discountCents}`),
     check("receipt_items_discount_chk", sql`${t.discountCents} >= 0`),
+    check("receipt_items_full_chk", sql`${t.priceFullCents} >= 0`),
+    check("receipt_items_paid_nonneg_chk", sql`${t.pricePaidCents} >= 0`),
     check("receipt_items_pieces_chk", sql`${t.pieces} is null or ${t.pieces} > 0`),
     check("receipt_items_amount_chk", sql`${t.amount} is null or ${t.amount} > 0`),
   ],
@@ -182,5 +195,6 @@ export const diaryEntries = sqliteTable(
     index("diary_entries_product_idx").on(t.productId),
     check("diary_entries_meal_chk", sql`${t.meal} in ('colazione', 'pranzo', 'cena', 'snack')`),
     check("diary_entries_amount_chk", sql`${t.amount} > 0`),
+    isoDateCheck("diary_entries_date_chk", t.date),
   ],
 );

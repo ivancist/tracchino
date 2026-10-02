@@ -71,6 +71,16 @@ describe("schema constraints", () => {
     expect(row?.n).toBe(0);
   });
 
+  it("rejects malformed dates and negative prices (migration 0001)", async () => {
+    await expect(db().prepare("insert into receipts (store_id, date) values (1, '1/10/2026')").run()).rejects.toThrow(/CHECK/);
+    await expect(insertItem(-100, 0, -100)).rejects.toThrow(/CHECK/);
+    await expect(insertItem(100, 150, -50)).rejects.toThrow(/CHECK/);
+  });
+
+  it("keeps store names unique per chain", async () => {
+    await expect(db().prepare("insert into stores (chain_id, name) values (1, 'Esselunga Milano')").run()).rejects.toThrow(/UNIQUE/);
+  });
+
   it("fills created_at automatically", async () => {
     const row = await db().prepare("select created_at from receipts where id = 1").first<{ created_at: number }>();
     expect(row?.created_at).toBeGreaterThan(Date.UTC(2026, 0, 1));

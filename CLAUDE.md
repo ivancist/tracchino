@@ -58,6 +58,8 @@ Never run `npm`, `npx`, `wrangler` or `node` directly on the host: it leaves glo
 5. No CORS headers: SPA and API are same-origin.
 6. External calls (Gemini, Open Food Facts) happen only from the Worker, never from the browser.
 7. The R2 bucket is never public (no custom domain, no `r2.dev`); photos are read only through the authenticated API.
+8. State-changing requests pass `sameOriginOnly()` (CSRF) and `parseBody` (JSON content type only, ≤ 256 KB). Read bodies only through `parseBody`.
+9. Never log whole error objects or request bodies (they can contain SQL values / personal data): message only.
 
 ## Stats semantics
 Daily/weekly mean and median include **every** calendar day/ISO week in the period, with 0 for days/weeks without purchases.
