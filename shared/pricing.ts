@@ -70,3 +70,12 @@ export function unitPrices(
     perPiece: perPieceCents(paidCents, line.pieces),
   };
 }
+
+/**
+ * Whether a new line may be prefilled with the last price paid. Only for packaged products (fixed size → stable
+ * price). Loose produce (bananas by weight) and per-piece items in varying packs (eggs 6 or 12) change price every
+ * time: prefilling would invite saving a stale price. Quantities (pieces/amount) are never prefilled.
+ */
+export function shouldPrefillPrice(product: Pick<ProductQuantityInfo, "packageAmount">): boolean {
+  return product.packageAmount != null;
+}

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import type { LastPrice, Product, ReceiptDetail } from "../../shared/api";
 import { formatIsoDate, todayRome } from "../../shared/dates";
 import { centsToInput, formatCents, parseEuroToCents } from "../../shared/money";
-import { unitPrices } from "../../shared/pricing";
+import { perPieceCents, shouldPrefillPrice, unitPrices } from "../../shared/pricing";
 import { formatAmount, parseAmount, perKiloSuffix } from "../../shared/quantity";
 import { receiptInput, type ReceiptInput } from "../../shared/schemas";
 import { ProductForm } from "../components/ProductForm";
@@ -46,6 +46,13 @@ function linesFrom(receipt: ReceiptDetail): Line[] {
     amount: i.amount != null ? String(i.amount) : "",
     showDiscount: i.discountCents > 0,
   }));
+}
+
+/** "ultima volta 1,79 € · 0,30 €/pz (ven 2 ott 2026)" */
+function lastPriceHint(last: LastPrice): string {
+  const paid = last.priceFullCents - last.discountCents;
+  const perPiece = perPieceCents(paid, last.pieces);
+  return `ultima volta ${formatCents(paid)}${perPiece != null ? ` · ${formatCents(perPiece)}/pz` : ""} (${formatIsoDate(last.date)})`;
 }
 
 type ParsedLine = {
@@ -134,11 +141,10 @@ function ReceiptEditor({ receipt }: { receipt: ReceiptDetail | null }) {
   function selectProduct(key: number, product: Product) {
     const line = lines.find((l) => l.key === key);
     const last = lastPriceByProduct.get(product.id);
-    // Prefill the price paid last time at this store (the usual case); never overwrite what was typed.
-    updateLine(key, {
-      productId: product.id,
-      ...(line && !line.price && last ? { price: centsToInput(last.priceFullCents) } : {}),
-    });
+    // Packaged products: prefill last time's price at this store (never overwriting what was typed).
+    // Loose/per-piece products only get the "ultima volta" hint. Quantities are never carried over.
+    const prefill = line && !line.price && last && shouldPrefillPrice(product);
+    updateLine(key, { productId: product.id, ...(prefill ? { price: centsToInput(last.priceFullCents) } : {}) });
   }
 
   function addLine() {
@@ -305,8 +311,8 @@ function ReceiptEditor({ receipt }: { receipt: ReceiptDetail | null }) {
                 {prices?.perPiece != null && <span>{formatCents(prices.perPiece)}/pz</span>}
                 {p.amount != null && product && <span>{formatAmount(p.amount, sizeUnit)}</span>}
                 {last && (
-                  <span className="muted">
-                    ultima volta {formatCents(last.priceFullCents - last.discountCents)} ({formatIsoDate(last.date)})
+                  <span className="muted" data-testid="last-price">
+                    {lastPriceHint(last)}
                   </span>
                 )}
               </p>

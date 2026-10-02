@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { perKiloCents, perPieceCents, resolveAmount, unitPrices } from "../../shared/pricing";
+import { perKiloCents, perPieceCents, resolveAmount, shouldPrefillPrice, unitPrices } from "../../shared/pricing";
 
 const bananas = { unit: "g", packageAmount: null, avgPieceAmount: 120 } as const;
 const pasta = { unit: "g", packageAmount: 500, avgPieceAmount: null } as const;
@@ -60,5 +60,13 @@ describe("unit prices", () => {
       perKilo: { cents: 0, source: "measured" },
       perPiece: 0,
     });
+  });
+});
+
+describe("shouldPrefillPrice", () => {
+  it("prefills only packaged products", () => {
+    expect(shouldPrefillPrice(pasta)).toBe(true);
+    expect(shouldPrefillPrice(bananas)).toBe(false); // loose, by weight
+    expect(shouldPrefillPrice(lettuce)).toBe(false); // per piece, e.g. eggs in packs of 6 or 12
   });
 });

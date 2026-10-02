@@ -5,5 +5,5 @@ export type ProductUnit = (typeof PRODUCT_UNITS)[number];
 export const UNIT_LABELS: Record<ProductUnit, string> = {
   g: "a peso (g)",
   ml: "a volume (ml)",
-  pz: "a pezzi",
+  pz: "a pezzi (uova, cespi… indichi quanti nella riga)",
 };

@@ -107,7 +107,8 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
   - "Unisci duplicati" vale per i **prodotti** (unità diverse non si uniscono). Catene e negozi hanno nomi univoci e si rinominano; per spostare uno scontrino su un altro negozio lo si modifica. L'unione di negozi verrà aggiunta solo se serve.
   - I gruppi si creano dal form prodotto e si rinominano o eliminano in fondo alla pagina Prodotti.
   - Le righe completamente vuote vengono ignorate. Il totale conta solo le righe complete e segnala quelle escluse.
-  - Il prezzo si precompila con l'ultimo pagato in quel negozio (escluso lo scontrino in modifica).
+  - Il prezzo si precompila con l'ultimo pagato in quel negozio (escluso lo scontrino in modifica) **solo per i prodotti confezionati** (`package_amount` impostato). Sfusi (banane a peso) e prodotti a pezzi in confezioni variabili (uova da 6 o da 12) mostrano solo il suggerimento "ultima volta X · €/pz". **Pezzi e quantità non vengono mai precompilati né memorizzati sul prodotto.**
+  - Uova e simili sono un solo prodotto "a pezzi": nella riga si indica il numero di uova (6, 12, o 12 per 2×6), e si confronta il prezzo per uovo.
   - Sicurezza: le scritture sono accettate solo dalla stessa origine (`Sec-Fetch-Site`/`Origin`), solo con `Content-Type: application/json`, fino a 256 KB.
 - **Verifiche**: test sul calcolo di `price_paid`, €/kg ed €/pezzo (compresi i casi con quantità mancanti o stimate); test delle route CRUD (input non valido → 400); un e2e "crea uno scontrino con 3 righe → compare nell'elenco con il totale giusto".
 
@@ -152,6 +153,7 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
      lines: [{ raw_text, price, qty_hint?, weight_hint?, unit_price_hint?,
                discount?: { raw_text, amount } }] }
    ```
+   I pezzi stampati nel testo della riga (es. "UOVA FRESCHE 6P") li estrae l'AI come `qty_hint` a ogni scansione: non vengono salvati nell'alias, perché lo stesso prodotto può comparire con confezioni diverse.
    Il prompt chiede di agganciare le righe di sconto ("SCONTO", "-0,50", "PROMO") alla riga del prodotto a cui si riferiscono, e di riportare quantità o peso **solo se stampati**.
 3. **Riconoscimento del negozio**: prima per P.IVA (affidabile), poi per somiglianza su nome e indirizzo. Se il negozio non esiste ancora lo crei in revisione.
 4. **Abbinamento delle righe** (vedi sotto).
