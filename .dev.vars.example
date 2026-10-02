@@ -1,0 +1,8 @@
+# Copy to .dev.vars (gitignored). Local development only.
+# In production every value below except DEV_AUTH_BYPASS is set with `npx wrangler secret put <NAME>`.
+DEV_AUTH_BYPASS=true
+GEMINI_API_KEY=
+ALLOWED_EMAIL=
+# Not needed locally (dev bypass); production values come from the Access application
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=

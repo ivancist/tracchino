@@ -1,0 +1,26 @@
+# Fixed project name so VS Code Dev Containers and `docker compose` CLI share the same container and volumes
+name: tracchino
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: sleep infinity
+    working_dir: /app
+    volumes:
+      - .:/app:cached
+      - node_modules:/app/node_modules
+      - npm-cache:/home/node/.npm
+      - cf-config:/home/node/.config # wrangler login (OAuth tokens)
+      - pw-browsers:/home/node/.cache/ms-playwright
+    ports:
+      # Bound to localhost only: dev mode bypasses Access auth, it must never be reachable from the LAN
+      - "127.0.0.1:5173:5173" # vite dev
+      - "127.0.0.1:8976:8976" # wrangler login OAuth callback
+
+volumes:
+  node_modules:
+  npm-cache:
+  cf-config:
+  pw-browsers:

@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tracchino",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-15",
+  // Served on *.workers.dev behind Cloudflare Access; no alternative preview URLs
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  // ACCESS_TEAM_DOMAIN, ACCESS_AUD, ALLOWED_EMAIL and GEMINI_API_KEY are secrets (public repo):
+  // locally in .dev.vars, in production via `wrangler secret put` (see docs/SETUP.md)
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tracchino",
+      // Replaced with the real id from `wrangler d1 create tracchino`
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "db/migrations"
+    }
+  ]
+}
