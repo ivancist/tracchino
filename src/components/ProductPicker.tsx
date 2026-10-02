@@ -54,7 +54,7 @@ export function ProductPicker({ products, value, onSelect, onCreate, autoFocus, 
         aria-autocomplete="list"
         autoComplete="off"
         autoFocus={autoFocus}
-        placeholder="Cerca o crea un prodotto…"
+        placeholder={onCreate ? "Cerca o crea un prodotto…" : "Cerca un prodotto…"}
         value={text}
         onFocus={(e) => {
           // Empty: show suggestions right away. Already chosen (or focus restored after a dialog): keep the

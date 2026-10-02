@@ -10,6 +10,7 @@ import { ProductEditPage } from "./pages/ProductEditPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ReceiptEditPage } from "./pages/ReceiptEditPage";
 import { ReceiptsPage } from "./pages/ReceiptsPage";
+import { StatsPage } from "./pages/StatsPage";
 import { StoresPage } from "./pages/StoresPage";
 import "./index.css";
 
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: "prodotti/nuovo", element: <ProductEditPage /> },
       { path: "prodotti/:id", element: <ProductEditPage /> },
       { path: "negozi", element: <StoresPage /> },
+      { path: "statistiche", element: <StatsPage /> },
       { path: "account", element: <AccountPage /> },
     ],
   },

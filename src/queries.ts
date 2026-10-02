@@ -4,6 +4,9 @@ import type {
   Created,
   LastPrice,
   MeResponse,
+  PriceStats,
+  SpendingStats,
+  TopProduct,
   Product,
   ProductGroup,
   ReceiptDetail,
@@ -71,7 +74,8 @@ function useWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, invalid
   });
 }
 
-const catalog = [keys.chains, keys.stores, keys.groups, keys.products, keys.receipts] as const;
+// Stats depend on everything: every write refreshes them too.
+const catalog = [keys.chains, keys.stores, keys.groups, keys.products, keys.receipts, ["stats"]] as const;
 
 export const useSaveChain = () =>
   useWrite(({ id, ...input }: ChainInput & { id?: number }) =>
@@ -103,3 +107,22 @@ export const useSaveReceipt = () =>
     ["stores"],
   ]);
 export const useDeleteReceipt = () => useWrite((id: number) => api.del(`/api/receipts/${id}`), catalog);
+
+const period = (from?: string, to?: string) =>
+  new URLSearchParams(Object.entries({ from, to }).filter((e): e is [string, string] => !!e[1])).toString();
+
+export const useSpending = (from?: string, to?: string) =>
+  useQuery({ queryKey: ["stats", "spending", from, to], queryFn: () => api.get<SpendingStats>(`/api/stats/spending?${period(from, to)}`) });
+
+export const useTopProducts = (from?: string, to?: string) =>
+  useQuery({
+    queryKey: ["stats", "top", from, to],
+    queryFn: () => api.get<TopProduct[]>(`/api/stats/top-products?limit=10&${period(from, to)}`),
+  });
+
+export const usePriceStats = (kind: "products" | "groups", id: number | null) =>
+  useQuery({
+    queryKey: ["stats", kind, id],
+    queryFn: () => api.get<PriceStats>(`/api/stats/${kind}/${id}`),
+    enabled: id != null,
+  });

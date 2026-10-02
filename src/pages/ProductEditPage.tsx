@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import type { Product } from "../../shared/api";
+import { PriceSection } from "../components/PriceSection";
 import { ProductForm } from "../components/ProductForm";
 import { ProductPicker, productLabel } from "../components/ProductPicker";
 import { ConfirmButton, ErrorText, PageHeader, QueryState } from "../components/ui";
@@ -29,6 +30,7 @@ export function ProductEditPage() {
   return (
     <>
       <PageHeader title={product ? productLabel(product) : "Nuovo prodotto"} back={back} />
+      {product && <PriceSection product={product} />}
       <ProductForm key={product?.id ?? "new"} product={product} onSaved={() => navigate("/prodotti")} />
 
       {product && (

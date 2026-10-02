@@ -95,3 +95,9 @@ export const receiptListQuery = z
 export const lastPricesQuery = z.object({
   excludeReceipt: z.coerce.number().int().positive().optional(),
 });
+
+export const periodQuery = z
+  .object({ from: isoDate.optional(), to: isoDate.optional() })
+  .refine((q) => !q.from || !q.to || q.from <= q.to, { message: "La data iniziale è dopo quella finale" });
+
+export const topProductsQuery = periodQuery.and(z.object({ limit: z.coerce.number().int().min(1).max(100).default(10) }));

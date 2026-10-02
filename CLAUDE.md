@@ -62,7 +62,9 @@ Never run `npm`, `npx`, `wrangler` or `node` directly on the host: it leaves glo
 9. Never log whole error objects or request bodies (they can contain SQL values / personal data): message only.
 
 ## Stats semantics
-Daily/weekly mean and median include **every** calendar day/ISO week in the period, with 0 for days/weeks without purchases.
+Daily/weekly mean and median include **every** calendar day/ISO week in the period, with 0 for days/weeks without purchases — partial edge weeks included (owner's explicit choice; `complete` is only a display hint).
+Store price comparisons rank on one metric only (€/kg, €/l or €/pz) and are Σpaid/Σquantity from raw cents, never averages of rounded unit prices.
+Charts follow the dataviz skill; categorical charts use at most 3 series (palette validated all-pairs for 3).
 
 ## Verification
 Work is not done until it is verified. After any non-trivial change, run the `verify` skill.

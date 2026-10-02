@@ -4,6 +4,7 @@ import { onSessionExpired } from "../api";
 
 const NAV = [
   { to: "/", label: "Scontrini", end: true },
+  { to: "/statistiche", label: "Statistiche", end: false },
   { to: "/prodotti", label: "Prodotti", end: false },
   { to: "/negozi", label: "Negozi", end: false },
   { to: "/account", label: "Account", end: false },

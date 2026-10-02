@@ -1,3 +1,4 @@
+import type { Frequency, PriceMetric, PurchaseLine, SpendingSummary, StorePriceStats } from "./stats";
 import type { ProductUnit } from "./types";
 
 // Response shapes of the API (hand-written; the Worker builds objects of these types).
@@ -89,3 +90,38 @@ export type ReceiptDetail = Omit<ReceiptSummary, "itemCount" | "totalCents"> & {
 };
 
 export type Created = { id: number };
+
+export type SpendingStats = SpendingSummary & {
+  allTimeTotalCents: number;
+  firstReceiptDate: string | null;
+};
+
+export type PurchaseRow = PurchaseLine & {
+  receiptId: number;
+  productId: number;
+  productName: string;
+  priceFullCents: number;
+  discountCents: number;
+};
+
+export type PriceStats = {
+  /** Metric used to rank stores: €/kg (or €/l when `volume`) or €/piece. */
+  metric: PriceMetric;
+  volume: boolean;
+  /** True when only the most recent MAX purchases were analysed. */
+  truncated: boolean;
+  frequency: Frequency;
+  byStore: StorePriceStats[];
+  /** Newest first */
+  purchases: PurchaseRow[];
+};
+
+export type TopProduct = {
+  productId: number;
+  name: string;
+  brand: string | null;
+  totalCents: number;
+  purchases: number;
+  days: number;
+  avgIntervalDays: number | null;
+};

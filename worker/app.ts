@@ -6,6 +6,7 @@ import { groupRoutes } from "./routes/groups";
 import { meRoutes } from "./routes/me";
 import { productRoutes } from "./routes/products";
 import { receiptRoutes } from "./routes/receipts";
+import { statsRoutes } from "./routes/stats";
 import { storeRoutes } from "./routes/stores";
 
 export type AppEnv = { Bindings: Env; Variables: AuthVariables };
@@ -23,6 +24,7 @@ export function createApp(options: { keySet?: KeySetFactory } = {}) {
   app.route("/groups", groupRoutes);
   app.route("/products", productRoutes);
   app.route("/receipts", receiptRoutes);
+  app.route("/stats", statsRoutes);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

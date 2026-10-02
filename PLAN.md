@@ -117,6 +117,11 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 - Media e mediana giornaliera e settimanale, totale dello storico, calcolate su **tutti i giorni (e tutte le settimane) del periodo**, compresi quelli senza spesa (valore 0). Il periodo predefinito va dal primo scontrino a oggi, ed è filtrabile. Le mediane si calcolano in TS nel Worker (SQLite non ha `MEDIAN`; i volumi sono piccoli).
 - Per prodotto o gruppo: andamento del €/kg nel tempo e **confronto tra negozi** (dove conviene comprare le banane).
 - Frequenza di acquisto per prodotto.
+- Decisioni (2026-10-02):
+  - Media e mediana **settimanali su tutte le settimane** del periodo, comprese quelle parziali all'inizio e alla fine (scelta confermata). Nel grafico le settimane parziali sono attenuate, solo come promemoria visivo.
+  - Confronto tra negozi: Σ pagato / Σ quantità (ponderato), su **una sola metrica**, cioè l'unità prevalente degli acquisti (€/kg, €/l o €/pz). €/kg ed €/l non si mescolano mai; "≈" segnala le quantità stimate.
+  - Grafico del prezzo nel tempo: al massimo 3 negozi (la palette è validata per 3), sempre incluso il più conveniente.
+  - Grafico giornaliero solo per periodi fino a 3 mesi; il grafico settimanale c'è sempre.
 - **Verifiche**: dataset di fixture con risultati calcolati a mano (media e mediana con numero di giorni pari e dispari, settimane a cavallo di mese e anno, giorni senza spesa); test di confronto tra negozi con quantità stimate.
 
 ### Fase 3 — Scansione scontrino con AI (dettaglio in §5)
