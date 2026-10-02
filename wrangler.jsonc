@@ -17,8 +17,7 @@
     {
       "binding": "DB",
       "database_name": "tracchino",
-      // Replaced with the real id from `wrangler d1 create tracchino`
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "bb2546db-b88b-4cbd-958c-a2b2fd4d9f0c",
       "migrations_dir": "db/migrations"
     }
   ]
