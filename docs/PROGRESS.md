@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (Fase 7: lista della spesa e scorte)
+Ultimo aggiornamento: 2026-10-03 (navigazione riorganizzata, correzione della scorta)
 
 ## Riprendere da qui
 
@@ -301,6 +301,18 @@ Richiesta dell'utente; scelte dell'utente: scorta solo da acquisti nell'app (nes
 - `phase-reviewer`: "non completa" per il tonno finito con meno di 3 giorni di diario, che non veniva suggerito. Corretto (scorta 0 → "finito" sempre). Corretti anche: unione di due prodotti entrambi in lista (una voce sola), etichette tagliate a 360 px. Aggiunti test: `costMode=last`, prodotto senza confezione, eliminazione a cascata.
 - Scala `verify` verde: 465 test, 54 e2e, build, segreti, config, migrazioni.
 - In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0006.sql`, migrazione applicata (tabella vuota, dati invariati), fast-forward di `main` a `fa0e13f`, deploy, smoke test (`/lista`, `/api/shopping-list`, `/api/pantry`, POST/DELETE) → 302.
+
+## Navigazione riorganizzata e correzione della scorta (branch `ui-reorg`)
+
+Richiesta dell'utente ("c'è tanto disordine"); dettagli e scelte in PLAN Fase 7.
+- Barra: Diario, Spesa (`/spesa` lista, `/spesa/scontrini`), Statistiche (+ vista Consumi), Altro (`/altro`: Prodotti, Negozi, icona Account). `/`, `/lista`, `/account` reindirizzano. Prodotti e Negozi hanno "indietro" verso Altro.
+- Scheda prodotto: `PackageSummary` (confezione, prezzo a confezione, €/kg, ultimo acquisto) e `StockSection` (scorta, correzione, frequenza e consumi) in `src/components/ProductOverview.tsx`, poi prezzi, porzioni, dati.
+- Elenco prodotti: scorta per prodotto, etichetta "Finito" (`.badge.finished`, token `--finished`/`--finished-soft`).
+- Testi di scorte e consumi in `src/pantryText.ts` (usati da lista, elenco, scheda prodotto e Consumi).
+- Correzione della scorta: migrazione `0007_stock_adjustments` (tabella nuova), `POST /api/pantry/:id/stock` (ne resta solo l'ultima), `estimateStock` riparte dalla correzione (stesso giorno: conta ciò che è registrato dopo, via `created_at`). `/api/pantry` copre anche i prodotti con una correzione; `rate` ora è un oggetto (con `eatenDays`) o `null`.
+- Errori miei corretti durante il lavoro: Prettier (non usato nel progetto) aveva riformattato `StatsPage.tsx`, ripristinato; D1 locale senza la 0007 → e2e falliti, migrazione locale applicata.
+- Test: 476 Vitest (correzioni: stesso giorno prima/dopo, senza acquisti, ultima vince, prodotto finito suggerito, 400/404, cascade), 54 e2e (navigazione e redirect, account solo in Altro, Spesa → Consumi → scheda prodotto → correzione → "Finito" nell'elenco). Mutazione sulla regola dello stesso giorno: rilevata.
+- `security-auditor`: SECURE, due LOW: storico delle correzioni (ora si tiene solo l'ultima) e migrazione da applicare con l'ok dell'utente.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").

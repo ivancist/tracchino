@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { addDays, formatIsoDate, formatShortDate, todayRome, weekStart } from "../../shared/dates";
 import { formatCents } from "../../shared/money";
 import { BarChart } from "../components/charts";
+import { ConsumptionStats } from "../components/ConsumptionStats";
 import { DietAnalysis } from "../components/DietAnalysis";
 import { Field, PageHeader, QueryState } from "../components/ui";
 import { useSpending, useTopProducts } from "../queries";
@@ -48,7 +49,8 @@ const money = (cents: number | null) => (cents == null ? "—" : formatCents(cen
 export function StatsPage() {
   const today = todayRome();
   const [params, setParams] = useSearchParams();
-  const view = params.get("vista") === "dieta" ? "dieta" : "spesa";
+  const vista = params.get("vista");
+  const view = vista === "dieta" || vista === "consumi" ? vista : "spesa";
   const [preset, setPreset] = useState<Preset>("all");
   const [custom, setCustom] = useState({ from: addDays(today, -29), to: today });
   const range = preset === "custom" ? custom : presetRange(preset, today);
@@ -68,26 +70,35 @@ export function StatsPage() {
         <button type="button" role="tab" aria-selected={view === "dieta"} onClick={() => setParams({ vista: "dieta" })}>
           Dieta
         </button>
+        <button type="button" role="tab" aria-selected={view === "consumi"} onClick={() => setParams({ vista: "consumi" })}>
+          Consumi
+        </button>
       </div>
-      <div className="chips" role="group" aria-label="Periodo">
-        {PRESETS.map((p) => (
-          <button key={p.id} type="button" className="chip" aria-pressed={preset === p.id} onClick={() => setPreset(p.id)}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-      {preset === "custom" && (
-        <div className="row">
-          <Field label="Dal">
-            <input className="input" type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} />
-          </Field>
-          <Field label="Al">
-            <input className="input" type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} />
-          </Field>
-        </div>
+      {view !== "consumi" && (
+        <>
+          <div className="chips" role="group" aria-label="Periodo">
+            {PRESETS.map((p) => (
+              <button key={p.id} type="button" className="chip" aria-pressed={preset === p.id} onClick={() => setPreset(p.id)}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {preset === "custom" && (
+            <div className="row">
+              <Field label="Dal">
+                <input className="input" type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} />
+              </Field>
+              <Field label="Al">
+                <input className="input" type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} />
+              </Field>
+            </div>
+          )}
+        </>
       )}
 
-      {view === "dieta" ? (
+      {view === "consumi" ? (
+        <ConsumptionStats />
+      ) : view === "dieta" ? (
         <DietAnalysis from={range.from} to={range.to} />
       ) : (
         <>

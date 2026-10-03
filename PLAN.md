@@ -172,7 +172,8 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 
 ### Fase 7 — Lista della spesa e scorte
 Richiesta dell'utente (2026-10-03): prevedere quando finisce un prodotto in base al diario, suggerire cosa comprare, sapere ogni quanto si consuma una confezione e quanto costa al mese. La lista resta flessibile.
-- **Scorta stimata** per prodotto = acquisti registrati nell'app − consumi del diario, a partire dal primo acquisto nell'app (scelta dell'utente: nessuna scorta iniziale né correzioni a mano).
+- **Scorta stimata** per prodotto = acquisti registrati nell'app − consumi del diario, a partire dal primo acquisto nell'app.
+  - **Correzione della scorta** (aggiunta il 2026-10-03 su richiesta dell'utente, che mangia anche con altri e segna solo le proprie porzioni; sostituisce la scelta iniziale "nessuna correzione"): "ne ho ancora X" oppure "finito". Conta solo l'ultima; da lì si riparte con gli acquisti e il diario successivi (nello stesso giorno, quelli registrati dopo la correzione). Vale anche per prodotti mai comprati nell'app. Un prodotto segnato "finito" viene suggerito anche se non è nel diario recente (1 confezione).
   - Quantità degli acquisti come in `shared/pricing.ts` (confezioni × peso della confezione, pesata o stimata con "≈").
   - Un acquisto con quantità sconosciuta rende sconosciuta la scorta. Prodotti mai comprati nell'app → nessuna previsione.
   - Nello stesso giorno l'acquisto viene prima del consumo. La scorta non scende mai sotto 0: aver mangiato più del comprato vuol dire che c'era altra scorta, ignota.
@@ -181,10 +182,14 @@ Richiesta dell'utente (2026-10-03): prevedere quando finisce un prodotto in base
 - **Quantità suggerita** in confezioni = consumo tipico di un giorno in cui il prodotto si mangia (mediana) / peso della confezione, arrotondato per eccesso, almeno 1 (tonno: 224 g in un pasto, confezione 112 g → 2). Senza peso della confezione: nessuna quantità. Si modifica a mano.
 - **Lista**: contiene solo ciò che l'utente sceglie. Sopra, "Suggeriti" per urgenza con "+ aggiungi" e quantità modificabile; si aggiunge anche qualsiasi prodotto o una voce libera ("candele"). I prodotti già in lista non compaiono nei suggeriti. Si spunta per togliere.
 - **Scontrino salvato** (nuovo, scansionato o manuale): le voci in lista dello stesso prodotto o dello **stesso gruppo** (altra marca) scalano delle confezioni comprate e spariscono a 0; una riga senza confezioni indicate vale 1 (come in `shared/pricing.ts`), una voce senza confezioni sparisce con qualsiasi acquisto. Le voci libere restano. Modificare uno scontrino già salvato non tocca la lista. Al massimo 500 voci.
-- **Consumi**: per ogni prodotto mangiato negli ultimi 30 giorni, consumo al giorno, "1 confezione ogni N giorni", confezioni al mese (30 giorni) e costo al mese = consumo × 30 × costo per grammo (stesse regole e preferenze del diario, "n.d." se mai comprato).
+- **Consumi**: per ogni prodotto mangiato negli ultimi 30 giorni, frequenza ("mangiato in X giorni su Y registrati"), consumo al giorno, "1 confezione ogni N giorni", confezioni al mese (30 giorni) e costo al mese = consumo × 30 × costo per grammo (stesse regole e preferenze del diario, "n.d." se mai comprato).
 - Prodotti che non finiscono nel diario (detersivi, spezie): solo a mano (scelta dell'utente).
 - Unione di prodotti: le voci in lista passano al prodotto che resta; se c'erano entrambi, una sola voce con le confezioni sommate.
-- UI: scheda "Lista" nella barra in basso, con "Lista" e "Scorte e consumi".
+- UI (riorganizzata il 2026-10-03 su richiesta dell'utente):
+  - barra in basso: **Diario** (apertura dell'app), **Spesa** (Lista | Scontrini), **Statistiche** (Spesa | Dieta | Consumi), **Altro** (Prodotti, Negozi; icona dell'account in alto a destra, solo qui, con email e stato del database);
+  - le scorte appartengono ai prodotti: nell'elenco "Restano …" o l'etichetta "Finito" (color sabbia tenue, non rosso); i consumi alle statistiche;
+  - scheda prodotto: prima la confezione (peso o volume) e il prezzo a confezione dell'ultimo acquisto, con €/kg; poi scorta (con correzione) e consumi; poi prezzi nel tempo e negozi, porzioni, dati del prodotto;
+  - nei Suggeriti della lista resta "Restano 200 g · finisce domani" (scelta dell'utente).
 - **Verifiche**: test della scorta e della previsione calcolati a mano sui dati reali (yogurt 1 kg − 4 × 200 g → 200 g, finisce domani; chia 90 g a 15 g/giorno → 6 giorni; avena 300 g a 50 g/giorno → 6 giorni; tonno 2 × 112 g mangiati → finito, 2 confezioni suggerite); scorta mai negativa; giorni senza diario esclusi; route della lista (400/401); scontrino salvato → voce scalata o rimossa, anche per un'altra marca dello stesso gruppo; e2e "suggerito → aggiunto → scontrino → sparisce".
 
 ---

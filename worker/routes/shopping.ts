@@ -6,15 +6,17 @@ import {
   CONSUMPTION_WINDOW_DAYS,
   consumptionRate,
   estimateStock,
+  finishedForecast,
   forecast,
   isReliable,
   monthlyUse,
   suggestedPackages,
   type PantryConsumption,
+  type StockAdjustment,
 } from "../../shared/pantry";
 import type { ProductQuantityInfo } from "../../shared/pricing";
 import { applyPurchases, type BoughtLine, type ListEntry } from "../../shared/shopping";
-import { pantryQuery, shoppingItemInput, shoppingItemUpdate } from "../../shared/schemas";
+import { pantryQuery, shoppingItemInput, shoppingItemUpdate, stockInput } from "../../shared/schemas";
 import type { ProductUnit } from "../../shared/types";
 import type { AppEnv } from "../app";
 import { HttpError, notFound, parseBody, parseId, parseQuery } from "../http";
@@ -100,74 +102,93 @@ export const shoppingListRoutes = new Hono<AppEnv>()
 
 type ProductRow = ProductQuantityInfo & { id: number; name: string; brand: string | null; unit: ProductUnit };
 
-/** /api/pantry — stock, forecast and monthly use of every product eaten in the last 30 days. */
-export const pantryRoutes = new Hono<AppEnv>().get("/", async (c) => {
-  const { costMode, windowDays } = parseQuery(c, pantryQuery);
-  const today = todayRome();
-  const from = addDays(today, -(CONSUMPTION_WINDOW_DAYS - 1));
-  const d1 = c.env.DB;
-  const [products, diary, logged, purchases, list] = await d1.batch<unknown>([
-    d1
-      .prepare(
-        `select id, name, brand, unit, package_amount as packageAmount, avg_piece_amount as avgPieceAmount from products
-          where id in (select distinct product_id from diary_entries where date between ?1 and ?2)`,
-      )
-      .bind(from, today),
-    // Every entry of those products: stock counts consumption since the first purchase, which may be older.
-    d1
-      .prepare(
-        `select product_id as productId, date, amount from diary_entries
-          where date <= ?2 and product_id in (select distinct product_id from diary_entries where date between ?1 and ?2)`,
-      )
-      .bind(from, today),
-    d1.prepare("select distinct date from diary_entries where date between ? and ?").bind(from, today),
-    d1
-      .prepare(
-        `select ri.product_id as productId, r.date, ri.price_paid_cents as paidCents, ri.packages, ri.pieces, ri.amount
-           from receipt_items ri join receipts r on r.id = ri.receipt_id
-          where ri.product_id in (select distinct product_id from diary_entries where date between ?1 and ?2)`,
-      )
-      .bind(from, today),
-    d1.prepare("select distinct product_id as productId from shopping_list_items where product_id is not null"),
-  ]);
+/** Products the pantry covers: eaten in the window, or with a stock correction. */
+const SCOPE = "(select product_id from diary_entries where date between ?1 and ?2 union select product_id from stock_adjustments)";
 
-  const loggedDays = (logged!.results as { date: string }[]).map((r) => r.date);
-  const inList = new Set((list!.results as { productId: number }[]).map((r) => r.productId));
-  const eatenBy = new Map<number, PantryConsumption[]>();
-  for (const e of diary!.results as (PantryConsumption & { productId: number })[]) eatenBy.set(e.productId, [...(eatenBy.get(e.productId) ?? []), e]);
-  const boughtBy = new Map<number, Purchase[]>();
-  for (const p of purchases!.results as (Purchase & { productId: number })[]) boughtBy.set(p.productId, [...(boughtBy.get(p.productId) ?? []), p]);
+/** /api/pantry — stock, forecast and monthly use of every product eaten in the last 30 days or with a stock correction. */
+export const pantryRoutes = new Hono<AppEnv>()
+  .get("/", async (c) => {
+    const { costMode, windowDays } = parseQuery(c, pantryQuery);
+    const today = todayRome();
+    const from = addDays(today, -(CONSUMPTION_WINDOW_DAYS - 1));
+    const d1 = c.env.DB;
+    const [products, diary, logged, purchases, adjustments, list] = await d1.batch<unknown>([
+      d1
+        .prepare(`select id, name, brand, unit, package_amount as packageAmount, avg_piece_amount as avgPieceAmount from products where id in ${SCOPE}`)
+        .bind(from, today),
+      // Every entry of those products: stock counts consumption since the first purchase or correction, which may be older.
+      d1
+        .prepare(`select product_id as productId, date, amount, created_at as createdAt from diary_entries where date <= ?2 and product_id in ${SCOPE}`)
+        .bind(from, today),
+      d1.prepare("select distinct date from diary_entries where date between ? and ?").bind(from, today),
+      d1
+        .prepare(
+          `select ri.product_id as productId, r.date, r.created_at as createdAt, ri.price_paid_cents as paidCents, ri.packages, ri.pieces, ri.amount
+             from receipt_items ri join receipts r on r.id = ri.receipt_id
+            where ri.product_id in ${SCOPE}`,
+        )
+        .bind(from, today),
+      d1.prepare(
+        `select productId, date, amount, createdAt from (
+           select product_id as productId, date, amount, created_at as createdAt,
+                  row_number() over (partition by product_id order by created_at desc, id desc) as rn
+             from stock_adjustments
+         ) where rn = 1`,
+      ),
+      d1.prepare("select distinct product_id as productId from shopping_list_items where product_id is not null"),
+    ]);
 
-  const items: PantryItem[] = (products!.results as ProductRow[]).flatMap((p) => {
-    const eaten = eatenBy.get(p.id) ?? [];
-    const bought = boughtBy.get(p.id) ?? [];
-    const rate = consumptionRate(eaten, loggedDays, today);
-    if (!rate) return [];
-    const stock = estimateStock(bought, eaten, p, today);
-    const cost = unitCost(bought, p, today, costMode, windowDays);
-    const reliable = isReliable(rate);
-    const use = reliable ? monthlyUse(rate, p.packageAmount, cost) : { packageEveryDays: null, packagesPerMonth: null, costPerMonthCents: null };
-    return [
-      {
+    const loggedDays = (logged!.results as { date: string }[]).map((r) => r.date);
+    const inList = new Set((list!.results as { productId: number }[]).map((r) => r.productId));
+    const latestAdjustment = new Map((adjustments!.results as (StockAdjustment & { productId: number })[]).map((a) => [a.productId, a]));
+    const eatenBy = new Map<number, PantryConsumption[]>();
+    for (const e of diary!.results as (PantryConsumption & { productId: number })[]) eatenBy.set(e.productId, [...(eatenBy.get(e.productId) ?? []), e]);
+    const boughtBy = new Map<number, (Purchase & { createdAt: number })[]>();
+    for (const p of purchases!.results as (Purchase & { productId: number; createdAt: number })[]) {
+      boughtBy.set(p.productId, [...(boughtBy.get(p.productId) ?? []), p]);
+    }
+
+    const items: PantryItem[] = (products!.results as ProductRow[]).map((p) => {
+      const eaten = eatenBy.get(p.id) ?? [];
+      const bought = boughtBy.get(p.id) ?? [];
+      const rate = consumptionRate(eaten, loggedDays, today);
+      const stock = estimateStock(bought, eaten, p, today, latestAdjustment.get(p.id) ?? null);
+      const cost = unitCost(bought, p, today, costMode, windowDays);
+      const reliable = rate != null && isReliable(rate);
+      const use = reliable ? monthlyUse(rate, p.packageAmount, cost) : { packageEveryDays: null, packagesPerMonth: null, costPerMonthCents: null };
+      return {
         productId: p.id,
         name: p.name,
         brand: p.brand,
         unit: p.unit,
         packageAmount: p.packageAmount,
-        perDay: rate.perDay,
-        typicalDay: rate.typicalDay,
-        rateDays: rate.days,
+        rate,
         stock,
-        // No stock left is "finished" even when the rate is too young to forecast (tuna bought and eaten the same day).
-        forecast: !stock ? null : reliable || stock.amount <= 0 ? forecast(stock.amount, rate, today) : null,
-        suggestedPackages: suggestedPackages(rate, p.packageAmount),
+        // No stock left is "finished" even without a usable rate (tuna bought and eaten the same day, or marked finished).
+        forecast: !stock ? null : stock.amount <= 0 ? finishedForecast(today) : reliable ? forecast(stock.amount, rate, today) : null,
+        suggestedPackages: rate ? suggestedPackages(rate, p.packageAmount) : p.packageAmount ? 1 : null,
         ...use,
         costEstimated: cost?.estimated ?? false,
         inList: inList.has(p.id),
-      },
-    ];
+      };
+    });
+    // Soonest to run out first; unknown stock last.
+    items.sort((a, b) => (a.forecast?.daysLeft ?? Infinity) - (b.forecast?.daysLeft ?? Infinity) || a.name.localeCompare(b.name, "it"));
+    return c.json(items);
+  })
+  /** Stock correction: "today I have `amount` g/ml left" (0 = finished). */
+  .post("/:id/stock", async (c) => {
+    const productId = parseId(c);
+    const { amount } = await parseBody(c, stockInput);
+    const d1 = c.env.DB;
+    const product = await d1.prepare("select id from products where id = ?").bind(productId).first();
+    if (!product) throw notFound("Prodotto non trovato");
+    // Only the latest correction counts: older ones of the product are dropped with it.
+    const [inserted] = await d1.batch<{ id: number }>([
+      d1.prepare("insert into stock_adjustments (product_id, date, amount) values (?, ?, ?) returning id").bind(productId, todayRome(), amount),
+      d1
+        .prepare("delete from stock_adjustments where product_id = ?1 and id <> (select max(id) from stock_adjustments where product_id = ?1)")
+        .bind(productId),
+    ]);
+    return c.json<Created>({ id: inserted!.results[0]!.id }, 201);
   });
-  // Soonest to run out first; unknown stock last.
-  items.sort((a, b) => (a.forecast?.daysLeft ?? Infinity) - (b.forecast?.daysLeft ?? Infinity) || a.name.localeCompare(b.name, "it"));
-  return c.json(items);
-});

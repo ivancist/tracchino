@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import type { ReceiptSummary } from "../../shared/api";
 import { formatIsoDate } from "../../shared/dates";
 import { formatCents } from "../../shared/money";
+import { ShoppingTabs } from "../components/ShoppingTabs";
 import { ErrorText, PageHeader, QueryState } from "../components/ui";
 import { compressReceiptPhoto } from "../image";
 import { scanReceipt, setPendingScan, useReceipts } from "../queries";
@@ -46,7 +47,7 @@ export function ReceiptsPage() {
   return (
     <>
       <PageHeader
-        title="Scontrini"
+        title="Spesa"
         action={
           <div className="actions">
             <label className={scan.busy ? "button disabled" : "button"}>
@@ -67,6 +68,7 @@ export function ReceiptsPage() {
           </div>
         }
       />
+      <ShoppingTabs />
       {scan.busy && <p className="muted" role="status">Sto leggendo lo scontrino, può richiedere una ventina di secondi…</p>}
       <ErrorText error={scan.error} />
       <QueryState isLoading={receipts.isLoading} error={receipts.error} />

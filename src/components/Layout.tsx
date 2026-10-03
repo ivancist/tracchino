@@ -2,14 +2,12 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { onSessionExpired } from "../api";
 
-// Six tabs fit at 360px (label-sized widths, smaller font); stores and account live under "Altro".
+// The diary comes first; shopping holds the list and the receipts; products and stores live under "Altro".
 const NAV = [
-  { to: "/", label: "Scontrini", end: true },
-  { to: "/lista", label: "Lista", end: false },
-  { to: "/diario", label: "Diario", end: false },
-  { to: "/statistiche", label: "Statistiche", end: false },
-  { to: "/prodotti", label: "Prodotti", end: false },
-  { to: "/account", label: "Altro", end: false, also: ["/negozi"] },
+  { to: "/diario", label: "Diario", also: [] as string[] },
+  { to: "/spesa", label: "Spesa", also: ["/scontrini"] },
+  { to: "/statistiche", label: "Statistiche", also: [] },
+  { to: "/altro", label: "Altro", also: ["/prodotti", "/negozi"] },
 ];
 
 export function Layout() {
@@ -35,8 +33,7 @@ export function Layout() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.end}
-            className={({ isActive }) => (isActive || item.also?.some((p) => pathname.startsWith(p)) ? "tab active" : "tab")}
+            className={({ isActive }) => (isActive || item.also.some((p) => pathname.startsWith(p)) ? "tab active" : "tab")}
           >
             {item.label}
           </NavLink>

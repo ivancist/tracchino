@@ -9,10 +9,15 @@ import type { BarcodeStart } from "../components/ProductForm";
 import { productLabel } from "../components/ProductPicker";
 import { ApiError, errorMessage } from "../api";
 import { ErrorText, PageHeader, QueryState } from "../components/ui";
-import { lookupBarcode, useProducts } from "../queries";
+import { storedCost } from "../costPreference";
+import { isFinished, stockText } from "../pantryText";
+import { lookupBarcode, usePantry, useProducts } from "../queries";
 
 export function ProductsPage() {
   const products = useProducts();
+  const [cost] = useState(storedCost);
+  const pantry = usePantry(cost.mode, cost.windowDays);
+  const stockById = useMemo(() => new Map((pantry.data ?? []).map((i) => [i.productId, i])), [pantry.data]);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
@@ -48,6 +53,11 @@ export function ProductsPage() {
     <>
       <PageHeader
         title="Prodotti"
+        back={
+          <Link to="/altro" className="back" aria-label="Indietro">
+            ‹
+          </Link>
+        }
         action={
           <div className="actions">
             <button type="button" className="button" disabled={looking} onClick={() => setScanning(true)}>
@@ -72,34 +82,44 @@ export function ProductsPage() {
       <QueryState isLoading={products.isLoading} error={products.error} />
       {products.data?.length === 0 && <p className="muted">Nessun prodotto: si creano anche direttamente dallo scontrino.</p>}
       <ul className="list">
-        {visible.map((p) => (
-          <li key={p.id}>
-            <Link to={`/prodotti/${p.id}`} className="list-item">
-              <span>
-                <strong>{p.name}</strong> {p.brand && <span className="muted">{p.brand}</span>}
-                <br />
-                <span className="muted small">
-                  {[
-                    p.groupName,
-                    p.packageAmount ? formatAmount(p.packageAmount, p.unit === "ml" ? "ml" : "g") : null,
-                    p.kcal100 != null ? `${p.kcal100} kcal` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+        {visible.map((p) => {
+          const stock = stockById.get(p.id);
+          return (
+            <li key={p.id}>
+              <Link to={`/prodotti/${p.id}`} className="list-item" data-testid="product-row">
+                <span>
+                  <strong>{p.name}</strong> {p.brand && <span className="muted">{p.brand}</span>}
+                  {stock && isFinished(stock) && <span className="badge finished">Finito</span>}
+                  <br />
+                  <span className="muted small">
+                    {[
+                      p.groupName,
+                      p.packageAmount ? formatAmount(p.packageAmount, p.unit === "ml" ? "ml" : "g") : null,
+                      p.kcal100 != null ? `${p.kcal100} kcal` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  {stock?.stock && !isFinished(stock) && (
+                    <>
+                      <br />
+                      <span className="small">{stockText(stock)}</span>
+                    </>
+                  )}
                 </span>
-              </span>
-              <span className="muted small right">
-                {p.purchaseCount > 0 ? `${p.purchaseCount}×` : "mai comprato"}
-                {p.lastPurchaseDate && (
-                  <>
-                    <br />
-                    {formatIsoDate(p.lastPurchaseDate)}
-                  </>
-                )}
-              </span>
-            </Link>
-          </li>
-        ))}
+                <span className="muted small right">
+                  {p.purchaseCount > 0 ? `${p.purchaseCount}×` : "mai comprato"}
+                  {p.lastPurchaseDate && (
+                    <>
+                      <br />
+                      {formatIsoDate(p.lastPurchaseDate)}
+                    </>
+                  )}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
       {!query.trim() && <GroupsSection />}
     </>

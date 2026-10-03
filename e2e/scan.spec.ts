@@ -80,7 +80,7 @@ async function startScan(page: Page, result: ScanResult) {
     scanned.push({ type: req.headers()["content-type"] ?? "", bytes: req.postDataBuffer()?.length ?? 0 });
     await route.fulfill({ json: result });
   });
-  await page.goto("/");
+  await page.goto("/spesa/scontrini");
   const photo = await syntheticPhoto(page);
   expect(photo.length).toBeGreaterThan(MAX_PHOTO_BYTES); // compression must actually do something
   await page.getByLabel("Foto dello scontrino").setInputFiles({ name: "scontrino.jpg", mimeType: "image/jpeg", buffer: photo });
@@ -150,7 +150,7 @@ test("scansione: revisione con stati, conferma obbligatoria, nuovo negozio e pro
   const uploaded = await photoUpload;
   expect(uploaded.headers()["content-type"]).toMatch(/^image\/(webp|jpeg)$/);
   expect(uploaded.postDataBuffer()!.length).toBeLessThanOrEqual(MAX_PHOTO_BYTES);
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/spesa\/scontrini$/);
 
   const list = (await (await request.get("/api/receipts?limit=50")).json()) as ReceiptSummary[];
   const saved = list.find((r) => r.chainName === `E2E Scan ${tag}`);

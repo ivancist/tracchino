@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router";
 import type { Chain, Store } from "../../shared/api";
 import { formatIsoDate } from "../../shared/dates";
 import { StoreForm } from "../components/StoreForm";
@@ -49,6 +50,11 @@ export function StoresPage() {
     <>
       <PageHeader
         title="Negozi"
+        back={
+          <Link to="/altro" className="back" aria-label="Indietro">
+            ‹
+          </Link>
+        }
         action={
           <button type="button" className="button primary" onClick={() => setEditing("new")}>
             + Nuovo

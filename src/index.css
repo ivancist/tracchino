@@ -10,6 +10,9 @@
   --accent-soft: #e3efe4;
   --error: #b3261e;
   --error-soft: #fbe9e7;
+  /* "finished" stock: a calm sand tone, distinguishable without the alarm of red */
+  --finished: #6e5a32;
+  --finished-soft: #f2ead8;
   --radius: 0.75rem;
   --tap: 2.75rem; /* 44px touch targets */
   --tabbar-h: 3.5rem;
@@ -30,6 +33,8 @@
     --accent-soft: #24352a;
     --error: #f2b8b5;
     --error-soft: #3a1f1d;
+    --finished: #d8c49a;
+    --finished-soft: #33301f;
   }
 }
 
@@ -56,6 +61,10 @@ body {
   align-items: center;
   gap: 0.5rem 0.75rem;
   margin: 0.25rem 0 1rem;
+}
+
+.account-button {
+  color: var(--muted);
 }
 
 .page-header h1 {
@@ -89,16 +98,14 @@ body {
 }
 
 .tab {
-  /* Width follows the label: six tabs fit at 360px only if "Statistiche" may be wider than "Lista". */
-  flex: 1 1 auto;
+  flex: 1;
   min-width: 0;
-  padding: 0 0.15rem;
   min-height: var(--tabbar-h);
   display: grid;
   place-items: center;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
 }
 
 .tab.active {
@@ -404,6 +411,23 @@ label.button:focus-within {
   color: var(--muted);
   margin: 0 0 0.4rem;
   font-weight: 600;
+}
+
+/* ---------- product page ---------- */
+.summary-size {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.summary-price {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.section-title {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 1.1rem;
 }
 
 /* ---------- shopping list ---------- */
@@ -986,6 +1010,15 @@ ul.notice {
   gap: 1rem;
 }
 
+.badge.first {
+  margin-left: 0;
+}
+
+.badge.finished {
+  background: var(--finished-soft);
+  color: var(--finished);
+}
+
 .badge {
   display: inline-block;
   margin-left: 0.4rem;
@@ -1023,7 +1056,11 @@ ul.notice {
   margin-bottom: 0.75rem;
 }
 
-.segmented.tabs button {
+.segmented.tabs button,
+.segmented.tabs a {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
   flex: 1;
   min-height: var(--tap);
   border: 1px solid var(--border);
@@ -1034,7 +1071,8 @@ ul.notice {
   cursor: pointer;
 }
 
-.segmented.tabs button[aria-selected="true"] {
+.segmented.tabs button[aria-selected="true"],
+.segmented.tabs a[aria-current="page"] {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);

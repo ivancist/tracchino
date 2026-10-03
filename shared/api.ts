@@ -253,20 +253,20 @@ export type ShoppingListItem = {
   packages: number | null;
 };
 
-/** GET /api/pantry: a product eaten in the last 30 days — stock, forecast, suggestion and monthly use. */
+/** GET /api/pantry: a product eaten in the last 30 days or with a stock correction — stock, forecast, suggestion, monthly use. */
 export type PantryItem = {
   productId: number;
   name: string;
   brand: string | null;
   unit: ProductUnit;
   packageAmount: number | null;
-  /** g/ml eaten per logged day, and on a typical day the product is eaten. */
-  perDay: number;
-  typicalDay: number;
-  /** Logged days the rate comes from; under MIN_RATE_DAYS there is no forecast nor monthly use. */
-  rateDays: number;
-  /** null: never bought in the app, or a purchase with unknown quantity. */
-  stock: { amount: number; estimated: boolean; since: string } | null;
+  /**
+   * Consumption over the last 30 days: g/ml per logged day, on a typical day it is eaten, logged days since first eaten
+   * (under MIN_RATE_DAYS: no forecast nor monthly use) and days eaten. null when not eaten lately (stock corrected only).
+   */
+  rate: { perDay: number; typicalDay: number; days: number; eatenDays: number } | null;
+  /** null: never bought in the app nor corrected, or a purchase with unknown quantity. */
+  stock: { amount: number; estimated: boolean; since: string; corrected: boolean } | null;
   forecast: { daysLeft: number; runOutDate: string; urgency: "finished" | "soon" | "week" | null } | null;
   suggestedPackages: number | null;
   packageEveryDays: number | null;

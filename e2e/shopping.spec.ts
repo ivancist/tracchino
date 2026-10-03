@@ -5,7 +5,7 @@ import { addDays, todayRome } from "../shared/dates";
 // years). Everything it creates carries a unique tag and is deleted afterwards.
 const uniqueTag = (project: string) => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${project}`;
 
-test("lista della spesa: suggerito → aggiunto → scontrino → esce dalla lista", async ({ page, request }, info) => {
+test("spesa: suggerito → aggiunto → scontrino → esce; consumi in statistiche; scorta nel prodotto", async ({ page, request }, info) => {
   const tag = uniqueTag(info.project.name);
   const today = todayRome();
   const created = { receipts: [] as number[], diary: [] as number[], products: [] as number[] };
@@ -27,8 +27,10 @@ test("lista della spesa: suggerito → aggiunto → scontrino → esce dalla lis
     // Tuna eaten but never bought in the app: no forecast, so never suggested
     created.diary.push(await post("/api/diary", { date: today, meal: "pranzo", productId: tuna, amount: 224 }));
 
-    await page.goto("/lista");
-    await expect(page.getByRole("link", { name: "Lista" })).toHaveClass(/active/);
+    await page.goto("/spesa");
+    const nav = page.getByRole("navigation", { name: "Sezioni" });
+    await expect(nav.getByRole("link", { name: "Spesa" })).toHaveClass(/active/);
+    await expect(page.getByRole("navigation", { name: "Spesa" }).getByRole("link", { name: "Lista" })).toHaveAttribute("aria-current", "page");
     const suggestion = page.getByTestId("urgency-soon").getByTestId("suggestion").filter({ hasText: `Yogurt ${tag}` });
     await expect(suggestion).toContainText(/Restano 200 g · finisce domani/);
     await expect(page.getByTestId("suggestion").filter({ hasText: `Tonno ${tag}` })).toHaveCount(0);
@@ -51,28 +53,46 @@ test("lista della spesa: suggerito → aggiunto → scontrino → esce dalla lis
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, "no horizontal scroll").toBeLessThanOrEqual(0);
     if (info.project.name === "mobile") {
-      // Six tabs at the narrowest supported width: no label is cut off
+      // The narrowest supported width: no tab label is cut off
       await page.setViewportSize({ width: 360, height: 780 });
       const clipped = await page.locator(".tab").evaluateAll((tabs) => tabs.filter((t) => t.scrollWidth > t.clientWidth).map((t) => t.textContent));
       expect(clipped).toEqual([]);
-      await page.screenshot({ path: info.outputPath("tabs-360.png") });
     }
     await page.screenshot({ path: info.outputPath("shopping-list.png"), fullPage: true });
 
-    // Pantry and monthly use
-    await page.getByRole("tab", { name: "Scorte e consumi" }).click();
-    const pantryYogurt = page.getByTestId("pantry-item").filter({ hasText: `Yogurt ${tag}` });
-    await expect(pantryYogurt).toContainText("200 g al giorno · 1 confezione ogni 5 giorni · 6 al mese");
-    await expect(pantryYogurt).toContainText(/26,40\s€ al mese/);
-    const pantryTuna = page.getByTestId("pantry-item").filter({ hasText: `Tonno ${tag}` });
-    await expect(pantryTuna).toContainText("Scorta sconosciuta");
-    await expect(pantryTuna).toContainText("Diario di 1 giorno da quando l'hai mangiato"); // one meal: no monthly projection
-    await page.screenshot({ path: info.outputPath("pantry.png"), fullPage: true });
+    // Consumption, with frequency: in the statistics
+    await page.goto("/statistiche?vista=consumi");
+    const used = page.getByTestId("consumption-item").filter({ hasText: `Yogurt ${tag}` });
+    await expect(used).toContainText("Mangiato in 4 giorni su 4 registrati");
+    await expect(used).toContainText("200 g al giorno · 1 confezione ogni 5 giorni · 6 al mese");
+    await expect(used).toContainText(/26,40\s€ al mese/);
+    await expect(page.getByTestId("consumption-item").filter({ hasText: `Tonno ${tag}` })).toContainText("Diario di 1 giorno"); // one meal
+    await page.screenshot({ path: info.outputPath("consumption.png"), fullPage: true });
+
+    // Product page: package and its price first, then stock and consumption
+    await used.getByRole("link").click();
+    await expect(page.getByTestId("package-summary")).toContainText("Confezione da 1 kg");
+    await expect(page.getByTestId("package-price")).toHaveText(/^4,40\s€ a confezione$/);
+    await expect(page.getByTestId("package-summary")).toContainText(/4,40\s€\/kg/);
+    const stock = page.getByTestId("stock-section");
+    await expect(stock.getByTestId("stock-text")).toHaveText(/Restano 200 g · finisce domani/);
+    // Shared yogurt: only 100 g left. Then it's finished.
+    await stock.getByRole("button", { name: "Correggi la scorta" }).click();
+    await stock.getByLabel("Quanto ne hai ancora").fill("100 g");
+    await stock.getByRole("button", { name: "Salva" }).click();
+    await expect(stock.getByTestId("stock-text")).toHaveText(/Restano 100 g · finisce oggi.*corretta da te/);
+    await stock.getByRole("button", { name: "Correggi la scorta" }).click();
+    await stock.getByRole("button", { name: "È finito" }).click();
+    await expect(stock.getByTestId("stock-text")).toContainText("Finito");
+    await page.screenshot({ path: info.outputPath("product.png"), fullPage: true });
+
+    // Products list: finished is flagged
+    await page.goto("/prodotti");
+    await expect(page.getByTestId("product-row").filter({ hasText: `Yogurt ${tag}` }).locator(".badge.finished")).toHaveText("Finito");
 
     // Next receipt: 1 package bought → 1 left on the list; another one → gone. Free text stays.
     created.receipts.push(await post("/api/receipts", { storeId, date: today, items: [{ productId: yogurt, priceFullCents: 440, packages: 1 }] }));
-    await page.getByRole("tab", { name: "Lista" }).click();
-    await page.reload();
+    await page.goto("/spesa");
     await expect(listed.getByLabel(`Confezioni di Yogurt ${tag}`)).toHaveValue("1");
     created.receipts.push(await post("/api/receipts", { storeId, date: today, items: [{ productId: yogurt, priceFullCents: 440 }] }));
     await page.reload();

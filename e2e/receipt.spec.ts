@@ -77,7 +77,7 @@ test("scontrino con 3 righe: crea negozio e prodotti, salva, compare nell'elenco
   await page.screenshot({ path: testInfo.outputPath("receipt-filled.png"), fullPage: true });
   await page.getByRole("button", { name: "Salva", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/spesa\/scontrini$/);
   const row = page.getByTestId("receipt-row").filter({ hasText: chain });
   await expect(row).toHaveCount(1);
   await expect(row.getByTestId("receipt-row-total")).toHaveText(euro("5,06"));
@@ -89,7 +89,7 @@ test("scontrino con 3 righe: crea negozio e prodotti, salva, compare nell'elenco
   await expect(page.getByTestId("receipt-total")).toHaveText(euro("5,06"));
   await page.getByRole("button", { name: "Elimina" }).click();
   await page.getByRole("button", { name: "Conferma" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/spesa\/scontrini$/);
   await expect(page.getByTestId("receipt-row").filter({ hasText: chain })).toHaveCount(0);
 });
 

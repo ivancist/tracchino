@@ -52,7 +52,7 @@ test("modifica di uno scontrino: cambia prezzo, rimuove una riga, ignora una rig
   await expect(page.getByTestId("receipt-total")).toHaveText(euro("1,59"));
   await page.getByRole("button", { name: "Salva", exact: true }).click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/spesa\/scontrini$/);
   const row = page.locator(`a[href="/scontrini/${receiptId}"]`);
   await expect(row.getByTestId("receipt-row-total")).toHaveText(euro("1,59"));
   await expect(row).toContainText("1 prodotto");
@@ -81,7 +81,7 @@ test("sessione Access scaduta: mostra l'avviso invece di 'Failed to fetch'", asy
   await page.route("**/api/**", (route) =>
     route.fulfill({ status: 302, headers: { Location: "https://team.cloudflareaccess.com/cdn-cgi/access/login" } }),
   );
-  await page.goto("/account");
+  await page.goto("/spesa");
   await expect(page.getByRole("alert").filter({ hasText: "Sessione scaduta" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Accedi di nuovo" })).toBeVisible();
 });

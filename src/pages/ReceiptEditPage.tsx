@@ -25,6 +25,8 @@ import {
   type PendingScan,
 } from "../queries";
 
+const RECEIPTS = "/spesa/scontrini";
+
 type Line = {
   key: number;
   productId: number | null;
@@ -141,7 +143,7 @@ export function ReceiptEditPage({ scan: scanMode = false }: { scan?: boolean }) 
     return (
       <div className="empty">
         <p>La scansione non è più disponibile (la pagina è stata ricaricata). Scatta di nuovo la foto.</p>
-        <Link to="/" className="button primary">
+        <Link to={RECEIPTS} className="button primary">
           Torna agli scontrini
         </Link>
       </div>
@@ -259,12 +261,12 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
     } catch (err) {
       return setError(err);
     }
-    if (!scan) return navigate("/");
+    if (!scan) return navigate(RECEIPTS);
     // The photo is stored only now, so abandoned scans leave nothing behind. If the upload fails the receipt
     // stays saved and its page offers to upload the photo again.
     try {
       await upload.mutateAsync({ id: savedId, photo: scan.photo });
-      navigate("/");
+      navigate(RECEIPTS);
     } catch {
       navigate(`/scontrini/${savedId}`, { replace: true, state: { photoFailed: true } });
     }
@@ -279,7 +281,7 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
       <PageHeader
         title={receiptId ? "Modifica scontrino" : scan ? "Revisione scansione" : "Nuovo scontrino"}
         back={
-          <Link to="/" className="back" aria-label="Indietro">
+          <Link to={RECEIPTS} className="back" aria-label="Indietro">
             ‹
           </Link>
         }
@@ -493,7 +495,7 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
             label="Elimina"
             confirmLabel="Conferma"
             disabled={remove.isPending}
-            onConfirm={() => remove.mutateAsync(receiptId).then(() => navigate("/"), setError)}
+            onConfirm={() => remove.mutateAsync(receiptId).then(() => navigate(RECEIPTS), setError)}
           />
         )}
         <button type="submit" className="button primary" disabled={busy}>

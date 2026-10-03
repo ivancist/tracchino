@@ -184,15 +184,34 @@ test("diario: nuova porzione creata al volo, navigazione tra i giorni", async ({
   await expect(page.getByRole("button", { name: "Giorno successivo" })).toBeDisabled();
 });
 
-test("navigazione: Diario nella barra, Negozi sotto Altro", async ({ page }) => {
+test("navigazione: Diario, Spesa (lista e scontrini), Statistiche, Altro (prodotti e negozi)", async ({ page }) => {
   await page.goto("/");
+  await expect(page).toHaveURL(/\/diario$/); // the app opens on the diary
   const nav = page.getByRole("navigation", { name: "Sezioni" });
-  await nav.getByRole("link", { name: "Diario" }).click();
+  await expect(nav.getByRole("link")).toHaveText(["Diario", "Spesa", "Statistiche", "Altro"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Diario");
+
+  await nav.getByRole("link", { name: "Spesa" }).click();
+  await expect(page).toHaveURL(/\/spesa$/);
+  const shopping = page.getByRole("navigation", { name: "Spesa" });
+  await shopping.getByRole("link", { name: "Scontrini" }).click();
+  await expect(page).toHaveURL(/\/spesa\/scontrini$/);
+  await expect(nav.getByRole("link", { name: "Spesa" })).toHaveClass(/active/);
+
   await nav.getByRole("link", { name: "Altro" }).click();
+  await page.getByRole("link", { name: /Prodotti/ }).click();
+  await expect(page).toHaveURL(/\/prodotti$/);
+  await expect(nav.getByRole("link", { name: "Altro" })).toHaveClass(/active/);
+  await page.getByRole("link", { name: "Indietro" }).click();
   await page.getByRole("link", { name: /Negozi e catene/ }).click();
   await expect(page).toHaveURL(/\/negozi$/);
   await expect(nav.getByRole("link", { name: "Altro" })).toHaveClass(/active/);
+
+  // Old addresses still work
+  await page.goto("/lista");
+  await expect(page).toHaveURL(/\/spesa$/);
+  await page.goto("/account");
+  await expect(page).toHaveURL(/\/altro$/);
 });
 
 test("diario: ripeti un pasto precedente cambiando marca e quantità; totali del pasto", async ({ page, request }, info) => {

@@ -13,40 +13,50 @@ export const URGENT_WITHIN_DAYS = 2;
 /** A rate from fewer logged days is too unreliable to forecast or project a month (one meal of tuna ≠ 224 g a day). */
 export const MIN_RATE_DAYS = 3;
 
-export type PantryPurchase = ItemQuantity & { date: string };
-export type PantryConsumption = { date: string; amount: number };
+/** `createdAt` (ms) orders same-day records against a stock correction made that day. */
+export type PantryPurchase = ItemQuantity & { date: string; createdAt?: number };
+export type PantryConsumption = { date: string; amount: number; createdAt?: number };
+/** "On `date` I have `amount` g/ml left" (the owner shares meals and logs only their own portions). */
+export type StockAdjustment = { date: string; amount: number; createdAt: number };
 
 export type Stock = {
   /** Grams/ml left. */
   amount: number;
   /** Some purchase quantity was estimated (no package count, or pieces × average weight). */
   estimated: boolean;
-  /** First purchase recorded in the app: consumption before it is ignored (it came from older, unknown stock). */
+  /** Start of the count: the latest correction, else the first purchase recorded in the app. */
   since: string;
+  /** The count starts from a correction made by the owner. */
+  corrected: boolean;
 };
 
 /**
- * Stock on `today`: every purchase from the first one recorded in the app, minus what the diary says was eaten since.
- * Purchases come before consumption on the same day. Stock never goes below 0: eating more than was bought means
- * there was other, unknown stock. null when never bought, or when a purchase has an unknown quantity.
+ * Stock on `today`. From the latest correction if there is one (records of that day count only if created after it),
+ * else from the first purchase recorded in the app (consumption before it came from older, unknown stock). Purchases
+ * come before consumption on the same day. Stock never goes below 0: eating more than was bought means there was other,
+ * unknown stock. null with neither a correction nor a purchase, or when a counted purchase has an unknown quantity.
  */
 export function estimateStock(
   purchases: readonly PantryPurchase[],
   consumption: readonly PantryConsumption[],
   product: ProductQuantityInfo,
   today: string,
+  adjustment: StockAdjustment | null = null,
 ): Stock | null {
-  const bought = purchases.filter((p) => p.date <= today).map((p) => ({ date: p.date, q: resolveAmount(p, product) }));
-  if (bought.length === 0 || bought.some((b) => b.q == null)) return null;
-  const since = bought.reduce((min, b) => (b.date < min ? b.date : min), bought[0]!.date);
+  const after = (r: { date: string; createdAt?: number }) =>
+    r.date <= today && (!adjustment || r.date > adjustment.date || (r.date === adjustment.date && (r.createdAt ?? 0) > adjustment.createdAt));
+  const bought = purchases.filter(after).map((p) => ({ date: p.date, q: resolveAmount(p, product) }));
+  if (bought.some((b) => b.q == null)) return null;
+  if (!adjustment && bought.length === 0) return null;
+  const since = adjustment?.date ?? bought.reduce((min, b) => (b.date < min ? b.date : min), bought[0]!.date);
 
   const events = [
     ...bought.map((b) => ({ date: b.date, order: 0, delta: b.q!.amount })),
-    ...consumption.filter((c) => c.date >= since && c.date <= today).map((c) => ({ date: c.date, order: 1, delta: -c.amount })),
-  ].sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order);
-  let amount = 0;
+    ...consumption.filter((c) => after(c) && c.date >= since).map((c) => ({ date: c.date, order: 1, delta: -c.amount })),
+  ].sort((x, y) => x.date.localeCompare(y.date) || x.order - y.order);
+  let amount = adjustment?.amount ?? 0;
   for (const e of events) amount = Math.max(0, amount + e.delta);
-  return { amount, estimated: bought.some((b) => b.q!.source === "estimated"), since };
+  return { amount, estimated: bought.some((b) => b.q!.source === "estimated"), since, corrected: adjustment != null };
 }
 
 export type Rate = {
@@ -56,6 +66,8 @@ export type Rate = {
   typicalDay: number;
   /** Logged days the rate is computed on. */
   days: number;
+  /** Days the product was eaten in the window (frequency: eaten on `eatenDays` of `days` logged days). */
+  eatenDays: number;
 };
 
 /**
@@ -81,7 +93,7 @@ export function consumptionRate(
   const mid = sorted.length >> 1;
   const typicalDay = sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 
-  return { perDay: eaten.reduce((s, c) => s + c.amount, 0) / days, typicalDay, days };
+  return { perDay: eaten.reduce((s, c) => s + c.amount, 0) / days, typicalDay, days, eatenDays: byDay.size };
 }
 
 export const isReliable = (rate: Rate) => rate.days >= MIN_RATE_DAYS;
@@ -102,6 +114,11 @@ export function forecast(stock: number, rate: Rate, today: string): Forecast {
   const urgency: Urgency | null =
     stock <= 0 ? "finished" : daysLeft <= URGENT_WITHIN_DAYS ? "soon" : daysLeft <= SUGGEST_WITHIN_DAYS ? "week" : null;
   return { daysLeft, runOutDate: addDays(today, Math.floor(daysLeft)), urgency };
+}
+
+/** No stock left: finished today, whatever the rate (or without one: a product marked finished, not eaten lately). */
+export function finishedForecast(today: string): Forecast {
+  return { daysLeft: 0, runOutDate: today, urgency: "finished" };
 }
 
 /** Packages to suggest: enough for a typical day of eating it (tuna 224 g / 112 g → 2), at least 1. null without a package size. */

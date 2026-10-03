@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PantryItem, ShoppingListItem } from "../../shared/api";
 import { addDays, todayRome } from "../../shared/dates";
@@ -119,9 +120,8 @@ describe("/api/pantry", () => {
     const items = (await api.get<PantryItem[]>("/api/pantry")).body;
     const yogurt = items.find((i) => i.productId === yogurtA)!;
     expect(yogurt).toMatchObject({
-      perDay: 200,
-      typicalDay: 200,
-      stock: { amount: 200, estimated: false, since: day(-4) },
+      rate: { perDay: 200, typicalDay: 200, days: 4, eatenDays: 4 },
+      stock: { amount: 200, estimated: false, since: day(-4), corrected: false },
       forecast: { daysLeft: 1, runOutDate: day(1), urgency: "soon" },
       suggestedPackages: 1,
       packageEveryDays: 5,
@@ -141,7 +141,7 @@ describe("/api/pantry", () => {
     await api.receipt({ storeId, date: day(0), items: [{ productId: tuna, priceFullCents: 238, packages: 2 }] });
     await api.post("/api/diary", { date: day(0), meal: "pranzo", productId: tuna, amount: 224 });
     const [t] = (await api.get<PantryItem[]>("/api/pantry")).body;
-    expect(t).toMatchObject({ rateDays: 1, stock: { amount: 0 }, forecast: { daysLeft: 0, runOutDate: day(0), urgency: "finished" }, suggestedPackages: 2 });
+    expect(t).toMatchObject({ rate: { days: 1 }, stock: { amount: 0 }, forecast: { daysLeft: 0, runOutDate: day(0), urgency: "finished" }, suggestedPackages: 2 });
     expect(t).toMatchObject({ packagesPerMonth: null, costPerMonthCents: null }); // one meal: no monthly projection
   });
 
@@ -161,7 +161,7 @@ describe("/api/pantry", () => {
     await api.post("/api/diary", { date: day(-1), meal: "pranzo", productId: tuna, amount: 100 });
     await api.post("/api/diary", { date: day(0), meal: "colazione", productId: yogurtA, amount: 200 }); // today is logged too
     const t = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === tuna);
-    expect(t).toMatchObject({ rateDays: 2, stock: { amount: 12 }, forecast: null, packagesPerMonth: null, costPerMonthCents: null });
+    expect(t).toMatchObject({ rate: { days: 2 }, stock: { amount: 12 }, forecast: null, packagesPerMonth: null, costPerMonthCents: null });
   });
 
   it("flags products already on the list, and validates its query", async () => {
@@ -170,6 +170,51 @@ describe("/api/pantry", () => {
     expect((await api.get<PantryItem[]>("/api/pantry")).body[0]).toMatchObject({ productId: yogurtA, inList: true });
     expect((await api.get("/api/pantry?costMode=nope")).status).toBe(400);
     expect((await api.get("/api/pantry?windowDays=0")).status).toBe(400);
+  });
+
+  it("a stock correction restarts the count; diary entries created after it still count", async () => {
+    await api.receipt({ storeId, date: day(-4), items: [{ productId: yogurtA, priceFullCents: 440, packages: 1 }] });
+    for (const d of [-3, -2, -1]) await api.post("/api/diary", { date: day(d), meal: "colazione", productId: yogurtA, amount: 200 });
+    // Shared yogurt: only 100 g left, not 400
+    expect((await api.post(`/api/pantry/${yogurtA}/stock`, { amount: 100 })).status).toBe(201);
+    let y = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === yogurtA)!;
+    expect(y.stock).toEqual({ amount: 100, estimated: false, since: day(0), corrected: true });
+    expect(y.forecast).toMatchObject({ urgency: "soon", runOutDate: day(0) }); // 100 g at 200 g/day: today
+    // Today's breakfast, logged after the correction, is taken off it
+    await api.post("/api/diary", { date: day(0), meal: "colazione", productId: yogurtA, amount: 200 });
+    y = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === yogurtA)!;
+    expect(y.stock?.amount).toBe(0);
+    expect(y.forecast?.urgency).toBe("finished");
+    // The latest correction wins
+    await api.post(`/api/pantry/${yogurtA}/stock`, { amount: 1000 });
+    y = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === yogurtA)!;
+    expect(y.stock?.amount).toBe(1000);
+    // Older corrections are not kept
+    const { results } = await env.DB.prepare("select amount from stock_adjustments where product_id = ?").bind(yogurtA).all();
+    expect(results).toEqual([{ amount: 1000 }]);
+  });
+
+  it("a product marked finished shows up even if not eaten lately: suggested, 1 package", async () => {
+    expect((await api.post(`/api/pantry/${tuna}/stock`, { amount: 0 })).status).toBe(201);
+    const [t] = (await api.get<PantryItem[]>("/api/pantry")).body;
+    expect(t).toMatchObject({ productId: tuna, rate: null, stock: { amount: 0, corrected: true }, forecast: { urgency: "finished" }, suggestedPackages: 1 });
+  });
+
+  it.each([
+    ["negative", { amount: -1 }],
+    ["fractional", { amount: 1.5 }],
+    ["missing", {}],
+    ["as text", { amount: "100" }],
+  ])("rejects a %s stock correction with 400", async (_name, body) => {
+    expect((await api.post(`/api/pantry/${tuna}/stock`, body)).status).toBe(400);
+  });
+
+  it("404 when correcting the stock of an unknown product; a deleted product takes its corrections with it", async () => {
+    expect((await api.post("/api/pantry/9999/stock", { amount: 1 })).status).toBe(404);
+    const p = await api.product({ name: "Usa e getta", unit: "g" });
+    await api.post(`/api/pantry/${p}/stock`, { amount: 10 });
+    expect((await api.del(`/api/products/${p}`)).status).toBe(204);
+    expect((await api.get<PantryItem[]>("/api/pantry")).body).toEqual([]);
   });
 
   it("ignores products not eaten in the last 30 days", async () => {

@@ -254,3 +254,5 @@ export const useAddShoppingItem = () => useWrite((input: ShoppingItemInput) => a
 export const useUpdateShoppingItem = () =>
   useWrite(({ id, packages }: { id: number; packages: number | null }) => api.patch<Created>(`/api/shopping-list/${id}`, { packages }), shopping);
 export const useDeleteShoppingItem = () => useWrite((id: number) => api.del(`/api/shopping-list/${id}`), shopping);
+export const useCorrectStock = () =>
+  useWrite(({ productId, amount }: { productId: number; amount: number }) => api.post<Created>(`/api/pantry/${productId}/stock`, { amount }), shopping);

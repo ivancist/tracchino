@@ -50,6 +50,13 @@
       "when": 1791032220272,
       "tag": "0006_shopping_list",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791034881061,
+      "tag": "0007_stock_adjustments",
+      "breakpoints": true
     }
   ]
 }

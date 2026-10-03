@@ -205,3 +205,7 @@ export type ShoppingItemInput = z.input<typeof shoppingItemInput>;
 export const shoppingItemUpdate = z.object({ packages: positiveInt.max(99).nullish().transform((v) => v ?? null) });
 
 export const pantryQuery = costOptions;
+
+/** Stock correction: g/ml left today (0 = finished). */
+export const stockInput = z.object({ amount: z.number().int().min(0).max(1_000_000) });
+export type StockInput = z.input<typeof stockInput>;

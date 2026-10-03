@@ -13,7 +13,7 @@ const cost = (paidCents: number, amount: number): UnitCost => ({ paidCents, amou
 
 describe("estimateStock", () => {
   it("yogurt: 1 kg bought, 4 × 200 g eaten → 200 g left", () => {
-    expect(estimateStock([buy("2026-09-29")], daily(200), pkg(1000), TODAY)).toEqual({ amount: 200, estimated: false, since: "2026-09-29" });
+    expect(estimateStock([buy("2026-09-29")], daily(200), pkg(1000), TODAY)).toEqual({ amount: 200, estimated: false, since: "2026-09-29", corrected: false });
   });
 
   it("chia 150 − 4 × 15 = 90 g; oats 500 − 4 × 50 = 300 g", () => {
@@ -43,6 +43,31 @@ describe("estimateStock", () => {
     expect(estimateStock([buy("2026-09-29")], [], loose, TODAY)).toBeNull(); // bananas without weight
   });
 
+  it("a correction restarts the count: yogurt shared, 400 g left on 1/10 after breakfast → 400 − 200 − 200 = 0", () => {
+    const eaten = daily(200).map((c, i) => ({ ...c, createdAt: i })); // createdAt order within the day
+    // Correction made on 1/10 after that day's breakfast (createdAt 1 < 5): only 2/10 and 3/10 count
+    expect(estimateStock([buy("2026-09-29")], eaten, pkg(1000), TODAY, { date: "2026-10-01", amount: 400, createdAt: 5 })).toEqual({
+      amount: 0,
+      estimated: false,
+      since: "2026-10-01",
+      corrected: true,
+    });
+    // Made before that breakfast (createdAt 0 < 1): 1/10 counts too → 400 − 600, never below 0
+    expect(estimateStock([buy("2026-09-29")], eaten, pkg(1000), TODAY, { date: "2026-10-01", amount: 400, createdAt: 0.5 })?.amount).toBe(0);
+    expect(estimateStock([buy("2026-09-29")], eaten, pkg(1000), TODAY, { date: "2026-10-01", amount: 700, createdAt: 0.5 })?.amount).toBe(100);
+  });
+
+  it("a correction works without purchases in the app, and later purchases add up", () => {
+    // Peanut butter never bought here: "I have 300 g" on 30/9, 50 g eaten on each of 4 days, then a 454 g jar on 2/10
+    const eaten = daily(50).map((c) => ({ ...c, createdAt: 10 }));
+    const adj = { date: "2026-09-30", amount: 300, createdAt: 1 };
+    expect(estimateStock([], eaten, pkg(454), TODAY, adj)?.amount).toBe(100);
+    expect(estimateStock([{ ...buy("2026-10-02"), createdAt: 20 }], eaten, pkg(454), TODAY, adj)?.amount).toBe(554);
+    // A purchase before the correction is already in the corrected amount, even with an unknown quantity
+    const loose = { unit: "g" as const, packageAmount: null, avgPieceAmount: null };
+    expect(estimateStock([buy("2026-09-29")], [], loose, TODAY, { date: "2026-09-30", amount: 80, createdAt: 1 })?.amount).toBe(80);
+  });
+
   it("flags an assumed package count as estimated", () => {
     expect(estimateStock([buy("2026-09-29", null)], [], pkg(500), TODAY)).toMatchObject({ amount: 500, estimated: true });
   });
@@ -50,7 +75,7 @@ describe("estimateStock", () => {
 
 describe("consumptionRate", () => {
   it("divides by the logged days since the product was first eaten (yogurt 800 g / 4 days = 200, not 800 / 5)", () => {
-    expect(consumptionRate(daily(200), LOGGED, TODAY)).toEqual({ perDay: 200, typicalDay: 200, days: 4 });
+    expect(consumptionRate(daily(200), LOGGED, TODAY)).toEqual({ perDay: 200, typicalDay: 200, days: 4, eatenDays: 4 });
   });
 
   it("days without a diary don't count", () => {
@@ -80,7 +105,7 @@ describe("consumptionRate", () => {
     expect(isReliable(consumptionRate([{ date: "2026-10-02", amount: 224 }], LOGGED, TODAY)!)).toBe(false); // 2 days
     expect(isReliable(consumptionRate([{ date: "2026-10-01", amount: 224 }], LOGGED, TODAY)!)).toBe(true); // 3 days
     // The owner's tuna, eaten on 29/9: 224 g over 5 logged days = 44.8 g/day
-    expect(consumptionRate([{ date: "2026-09-29", amount: 224 }], LOGGED, TODAY)).toEqual({ perDay: 44.8, typicalDay: 224, days: 5 });
+    expect(consumptionRate([{ date: "2026-09-29", amount: 224 }], LOGGED, TODAY)).toEqual({ perDay: 44.8, typicalDay: 224, days: 5, eatenDays: 1 });
   });
 
   it("only the last 30 days count; nothing eaten in them → null", () => {
@@ -91,7 +116,7 @@ describe("consumptionRate", () => {
 });
 
 describe("forecast and suggestions", () => {
-  const rate = (perDay: number, typicalDay = perDay) => ({ perDay, typicalDay, days: 4 });
+  const rate = (perDay: number, typicalDay = perDay) => ({ perDay, typicalDay, days: 4, eatenDays: 4 });
 
   it("yogurt 200 g at 200 g/day runs out tomorrow: urgent", () => {
     expect(forecast(200, rate(200), TODAY)).toEqual({ daysLeft: 1, runOutDate: "2026-10-04", urgency: "soon" });
@@ -120,7 +145,7 @@ describe("forecast and suggestions", () => {
 
 describe("monthlyUse", () => {
   it("yogurt: 1 package every 5 days, 6 a month, 6 kg × 4,40 €/kg = 26,40 €", () => {
-    expect(monthlyUse({ perDay: 200, typicalDay: 200, days: 4 }, 1000, cost(440, 1000))).toEqual({
+    expect(monthlyUse({ perDay: 200, typicalDay: 200, days: 4, eatenDays: 4 }, 1000, cost(440, 1000))).toEqual({
       packageEveryDays: 5,
       packagesPerMonth: 6,
       costPerMonthCents: 2640,
@@ -128,7 +153,7 @@ describe("monthlyUse", () => {
   });
 
   it("chia: every 10 days, 3 a month, 450 g × 1,99 € / 150 g = 5,97 €", () => {
-    expect(monthlyUse({ perDay: 15, typicalDay: 15, days: 4 }, 150, cost(199, 150))).toEqual({
+    expect(monthlyUse({ perDay: 15, typicalDay: 15, days: 4, eatenDays: 4 }, 150, cost(199, 150))).toEqual({
       packageEveryDays: 10,
       packagesPerMonth: 3,
       costPerMonthCents: 597,
@@ -136,8 +161,8 @@ describe("monthlyUse", () => {
   });
 
   it("unknown cost stays null (never bought), never 0; no package → only the cost", () => {
-    expect(monthlyUse({ perDay: 50, typicalDay: 50, days: 4 }, 454, null)).toMatchObject({ costPerMonthCents: null, packagesPerMonth: 3.303964757709251 });
-    expect(monthlyUse({ perDay: 120, typicalDay: 120, days: 2 }, null, cost(47, 480))).toEqual({
+    expect(monthlyUse({ perDay: 50, typicalDay: 50, days: 4, eatenDays: 4 }, 454, null)).toMatchObject({ costPerMonthCents: null, packagesPerMonth: 3.303964757709251 });
+    expect(monthlyUse({ perDay: 120, typicalDay: 120, days: 2, eatenDays: 2 }, null, cost(47, 480))).toEqual({
       packageEveryDays: null,
       packagesPerMonth: null,
       costPerMonthCents: 353, // 3600 g × 47 / 480 = 352.5 → 353

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { ApiError } from "./api";
 import { Layout } from "./components/Layout";
@@ -30,19 +30,23 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { index: true, element: <ReceiptsPage /> },
+      { index: true, element: <Navigate to="/diario" replace /> },
+      { path: "spesa", element: <ShoppingPage /> },
+      { path: "spesa/scontrini", element: <ReceiptsPage /> },
       // Distinct keys: switching between these routes must remount the page (e.g. scan review → saved receipt).
       { path: "scontrini/nuovo", element: <ReceiptEditPage key="new" /> },
       { path: "scontrini/scansione", element: <ReceiptEditPage key="scan" scan /> },
       { path: "scontrini/:id", element: <ReceiptEditPage key="edit" /> },
-      { path: "lista", element: <ShoppingPage /> },
+      // Old addresses (bookmarks, installed PWA)
+      { path: "lista", element: <Navigate to="/spesa" replace /> },
+      { path: "account", element: <Navigate to="/altro" replace /> },
       { path: "diario", element: <DiaryPage /> },
       { path: "prodotti", element: <ProductsPage /> },
       { path: "prodotti/nuovo", element: <ProductEditPage /> },
       { path: "prodotti/:id", element: <ProductEditPage /> },
       { path: "negozi", element: <StoresPage /> },
       { path: "statistiche", element: <StatsPage /> },
-      { path: "account", element: <AccountPage /> },
+      { path: "altro", element: <AccountPage /> },
     ],
   },
 ]);

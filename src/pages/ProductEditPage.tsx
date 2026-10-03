@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { Product } from "../../shared/api";
 import { PriceSection } from "../components/PriceSection";
+import { PackageSummary, StockSection } from "../components/ProductOverview";
 import { PortionsSection } from "../components/PortionsSection";
 import { ProductForm, type BarcodeStart } from "../components/ProductForm";
 import { ProductPicker, productLabel } from "../components/ProductPicker";
@@ -34,7 +35,15 @@ export function ProductEditPage() {
   return (
     <>
       <PageHeader title={product ? productLabel(product) : "Nuovo prodotto"} back={back} />
-      {product && <PriceSection product={product} />}
+      {product && (
+        <>
+          <PackageSummary product={product} />
+          <StockSection product={product} />
+          <PriceSection product={product} />
+          <PortionsSection product={product} />
+          <h2 className="section-title">Dati del prodotto</h2>
+        </>
+      )}
       <ProductForm
         key={product?.id ?? `new-${start?.barcode ?? ""}`}
         product={product}
@@ -42,7 +51,6 @@ export function ProductEditPage() {
         onSaved={() => navigate("/prodotti")}
         onUseExisting={(existingId) => navigate(`/prodotti/${existingId}`)}
       />
-      {product && <PortionsSection product={product} />}
 
       {product && (
         <section className="card danger-zone">

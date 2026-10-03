@@ -229,3 +229,25 @@ export const shoppingListItems = sqliteTable(
     check("shopping_list_items_packages_chk", sql`${t.packages} is null or ${t.packages} > 0`),
   ],
 );
+
+/**
+ * Stock corrections (the owner shares meals and logs only their own portions): "on `date` I have `amount` g/ml left".
+ * Only the latest counts; purchases and diary entries recorded after it (same day: created after it) apply on top.
+ */
+export const stockAdjustments = sqliteTable(
+  "stock_adjustments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    amount: integer("amount").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("stock_adjustments_product_idx").on(t.productId),
+    isoDateCheck("stock_adjustments_date_chk", t.date),
+    check("stock_adjustments_amount_chk", sql`${t.amount} >= 0`),
+  ],
+);
