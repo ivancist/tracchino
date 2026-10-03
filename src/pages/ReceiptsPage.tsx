@@ -1,9 +1,11 @@
-import { Link } from "react-router";
+import { useState, type ChangeEvent } from "react";
+import { Link, useNavigate } from "react-router";
 import type { ReceiptSummary } from "../../shared/api";
 import { formatIsoDate } from "../../shared/dates";
 import { formatCents } from "../../shared/money";
-import { PageHeader, QueryState } from "../components/ui";
-import { useReceipts } from "../queries";
+import { ErrorText, PageHeader, QueryState } from "../components/ui";
+import { compressReceiptPhoto } from "../image";
+import { scanReceipt, setPendingScan, useReceipts } from "../queries";
 
 function groupByDate(receipts: ReceiptSummary[]) {
   const groups = new Map<string, ReceiptSummary[]>();
@@ -11,20 +13,62 @@ function groupByDate(receipts: ReceiptSummary[]) {
   return [...groups.entries()];
 }
 
+/** Photo → compressed in the browser → AI scan → review screen (nothing is saved until confirmed there). */
+function useScan() {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function onFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // the same photo can be picked again after an error
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const photo = await compressReceiptPhoto(file);
+      const result = await scanReceipt(photo);
+      setPendingScan({ result, photo, photoUrl: URL.createObjectURL(photo) });
+      navigate("/scontrini/scansione");
+    } catch (err) {
+      setError(err);
+      setBusy(false);
+    }
+  }
+  return { busy, error, onFile };
+}
+
 export function ReceiptsPage() {
   const receipts = useReceipts();
   const all = receipts.data?.pages.flat();
+  const scan = useScan();
 
   return (
     <>
       <PageHeader
         title="Scontrini"
         action={
-          <Link to="/scontrini/nuovo" className="button primary">
-            + Nuovo
-          </Link>
+          <div className="actions">
+            <label className={scan.busy ? "button disabled" : "button"}>
+              {scan.busy ? "Lettura…" : "📷 Scansiona"}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="visually-hidden"
+                disabled={scan.busy}
+                aria-label="Foto dello scontrino"
+                onChange={scan.onFile}
+              />
+            </label>
+            <Link to="/scontrini/nuovo" className="button primary">
+              + Nuovo
+            </Link>
+          </div>
         }
       />
+      {scan.busy && <p className="muted" role="status">Sto leggendo lo scontrino, può richiedere una ventina di secondi…</p>}
+      <ErrorText error={scan.error} />
       <QueryState isLoading={receipts.isLoading} error={receipts.error} />
       {all?.length === 0 && (
         <div className="empty">

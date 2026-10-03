@@ -129,16 +129,26 @@ export const usePriceStats = (kind: "products" | "groups", id: number | null) =>
   });
 
 export const scanReceipt = (photo: Blob) => api.post<ScanResult>("/api/receipts/scan", photo);
-export const uploadReceiptPhoto = (id: number, photo: Blob) => api.put<void>(`/api/receipts/${id}/photo`, photo);
+
+/** Replaces a saved receipt's photo; the detail query refetches so `hasPhoto` updates. */
+export const useUploadReceiptPhoto = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, photo }: { id: number; photo: Blob }) => api.put<void>(`/api/receipts/${id}/photo`, photo),
+    onSuccess: (_data, { id }) => qc.invalidateQueries({ queryKey: keys.receipt(id) }),
+  });
+};
+
+export type PendingScan = { result: ScanResult; photo: Blob; photoUrl: string };
 
 /**
  * The scan result and its photo, handed from the receipts list to the review screen. Kept in memory on purpose:
- * a reload drops it (the photo is only stored once the receipt is saved).
+ * a reload drops it (the photo is only stored once the receipt is saved). Reading doesn't consume it (StrictMode
+ * runs state initializers twice); it's cleared once the receipt is saved.
  */
-let pendingScan: { result: ScanResult; photo: Blob } | null = null;
-export const setPendingScan = (scan: typeof pendingScan) => void (pendingScan = scan);
-export const takePendingScan = () => {
-  const scan = pendingScan;
-  pendingScan = null;
-  return scan;
+let pendingScan: PendingScan | null = null;
+export const setPendingScan = (scan: PendingScan | null) => {
+  if (pendingScan && pendingScan.photoUrl !== scan?.photoUrl) URL.revokeObjectURL(pendingScan.photoUrl);
+  pendingScan = scan;
 };
+export const getPendingScan = () => pendingScan;

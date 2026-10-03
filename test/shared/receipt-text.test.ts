@@ -13,6 +13,11 @@ describe("normalizeRawText", () => {
     ["CAFFÈ D'ORZO", "CAFFE D ORZO"],
     ["LATTE PS  1L *", "LATTE PS 1L"],
     ["UOVA FRESCHE 6P", "UOVA FRESCHE 6P"],
+    ["BAN.CHIQ. 1.79", "BAN.CHIQ"],
+    // Whole numbers at the end are sizes (often truncated), never prices
+    ["FAGIOLI BIANCHI 40", "FAGIOLI BIANCHI 40"],
+    ["PASSATA POMOD. 700", "PASSATA POMOD.700"],
+    ["SALE IODATO FINO 1", "SALE IODATO FINO 1"],
   ])("%j → %j", (raw, norm) => {
     expect(normalizeRawText(raw)).toBe(norm);
   });
@@ -20,6 +25,8 @@ describe("normalizeRawText", () => {
   it("maps spelling variants of the same line to one key", () => {
     const variants = ["BAN.CHIQ.", "ban.chiq", "Ban. Chiq. A", "BAN.CHIQ.  1,79"];
     expect(new Set(variants.map(normalizeRawText)).size).toBe(1);
+    // Real case: two scans of the same Eurospin receipt, read with and without the space
+    expect(normalizeRawText("SGOMBRI GR.NAT. 120")).toBe(normalizeRawText("SGOMBRI GR.NAT.120"));
   });
 
   it("keeps meaningful numbers inside the text", () => {

@@ -29,8 +29,10 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <ReceiptsPage /> },
-      { path: "scontrini/nuovo", element: <ReceiptEditPage /> },
-      { path: "scontrini/:id", element: <ReceiptEditPage /> },
+      // Distinct keys: switching between these routes must remount the page (e.g. scan review → saved receipt).
+      { path: "scontrini/nuovo", element: <ReceiptEditPage key="new" /> },
+      { path: "scontrini/scansione", element: <ReceiptEditPage key="scan" scan /> },
+      { path: "scontrini/:id", element: <ReceiptEditPage key="edit" /> },
       { path: "prodotti", element: <ProductsPage /> },
       { path: "prodotti/nuovo", element: <ProductEditPage /> },
       { path: "prodotti/:id", element: <ProductEditPage /> },

@@ -27,6 +27,8 @@ function fakeAi(extraction: ExtractedReceipt, opts: { failChoose?: boolean; choo
 }
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 0xff, 0xd9]);
+const WEBP = new Uint8Array([...new TextEncoder().encode("RIFF"), 4, 0, 0, 0, ...new TextEncoder().encode("WEBP"), 1, 2]);
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2]);
 
 async function appWith(ai: ReceiptAi | null) {
   const access = await createFakeAccess();
@@ -89,6 +91,8 @@ describe("POST /api/receipts/scan", () => {
     expect(scan.aiMatching).toBe(true);
     expect(calls.extract).toBe(1);
     expect(scan.scansLeft).toBe(SCAN_DAILY_LIMIT - 1);
+    // Scanning stores nothing: the photo is uploaded only when the reviewed receipt is saved
+    expect((await env.RECEIPT_PHOTOS.list()).objects).toHaveLength(0);
   });
 
   it("learns aliases on save: the second scan matches automatically, without asking the AI", async () => {
@@ -140,6 +144,8 @@ describe("POST /api/receipts/scan", () => {
     const { status, res } = await (await appWith(ai))("/api/receipts/scan", JPEG, "image/jpeg");
     expect(status).toBe(502);
     expect(await res.json()).toMatchObject({ message: "Limite gratuito del servizio AI raggiunto per oggi" });
+    // A provider failure doesn't consume the daily cap (the attempt is still counted as an AI call)
+    expect(await env.DB.prepare("select scans, ai_calls as calls from ai_usage").first()).toEqual({ scans: 0, calls: 1 });
   });
 
   it("is disabled (503) without an AI key", async () => {
@@ -151,6 +157,11 @@ describe("POST /api/receipts/scan", () => {
     expect((await call("/api/receipts/scan", JPEG, "text/plain")).status).toBe(415);
     expect((await call("/api/receipts/scan", JPEG, "application/json")).status).toBe(415);
     expect((await call("/api/receipts/scan", new Uint8Array(2 * 1024 * 1024 + 1), "image/jpeg")).status).toBe(413);
+    // The declared type must match the bytes
+    expect((await call("/api/receipts/scan", new TextEncoder().encode("<html>not an image</html>"), "image/webp")).status).toBe(415);
+    expect((await call("/api/receipts/scan", WEBP, "image/jpeg")).status).toBe(415);
+    expect((await call("/api/receipts/scan", JPEG, "image/png")).status).toBe(415);
+    expect((await call("/api/receipts/scan", PNG, "image/jpeg")).status).toBe(415);
     expect((await call("/api/receipts/scan", new Uint8Array(0), "image/jpeg")).status).toBe(400);
   });
 
@@ -186,7 +197,7 @@ describe("receipt photo (private R2)", () => {
     const photo = await call(`/api/receipts/${id}/photo`, null, "", "GET");
     expect(photo.status).toBe(200);
     expect(photo.res.headers.get("Content-Type")).toBe("image/jpeg");
-    expect(photo.res.headers.get("Cache-Control")).toContain("private");
+    expect(photo.res.headers.get("Cache-Control")).toBe("private, no-cache");
     expect(new Uint8Array(await photo.res.arrayBuffer())).toEqual(JPEG);
     expect(await env.RECEIPT_PHOTOS.get(`receipts/${id}.jpg`)).not.toBeNull();
 
@@ -198,7 +209,7 @@ describe("receipt photo (private R2)", () => {
     const call = await appWith(null);
     const id = await newReceipt();
     await call(`/api/receipts/${id}/photo`, JPEG, "image/jpeg", "PUT");
-    await call(`/api/receipts/${id}/photo`, new Uint8Array([1, 2, 3]), "image/webp", "PUT");
+    await call(`/api/receipts/${id}/photo`, WEBP, "image/webp", "PUT");
     expect(await env.RECEIPT_PHOTOS.get(`receipts/${id}.jpg`)).toBeNull();
     expect(await env.RECEIPT_PHOTOS.get(`receipts/${id}.webp`)).not.toBeNull();
   });

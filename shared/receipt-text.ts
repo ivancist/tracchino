@@ -4,7 +4,8 @@
  * Canonical form of a printed receipt line, used as alias key:
  * uppercase, no accents, a trailing price / VAT or department code removed, punctuation reduced to dots,
  * no space after a dot, single spaces, no trailing dot.
- * "Ban. Chiq.  1,79 A" → "BAN.CHIQ"
+ * "Ban. Chiq.  1,79 A" → "BAN.CHIQ". Trailing whole numbers are sizes, not prices, and stay:
+ * "SGOMBRI GR.NAT. 120" and "SGOMBRI GR.NAT.120" → "SGOMBRI GR.NAT.120".
  */
 export function normalizeRawText(raw: string): string {
   let s = raw
@@ -17,7 +18,7 @@ export function normalizeRawText(raw: string): string {
   for (let i = 0; i < 4; i++) {
     const before = s;
     s = s
-      .replace(/\s+\d+[.]?\d{0,2}\s*$/u, "") // price, possibly mangled ("1 79" → "1" after the first pass)
+      .replace(/\s+\d+(?:\.|\s)\d{2}$/u, "") // price with decimals: "1.79", or "1,79" (comma became a space)
       .replace(/\s+\d{1,2}%$/u, "") // VAT rate
       .replace(/\s+[A-Z]$/u, "") // VAT / department letter
       .trim();

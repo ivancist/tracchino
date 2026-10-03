@@ -11,18 +11,24 @@ import {
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const TIMEOUT_MS = 45_000;
+/** Gemini answers 500/503 when overloaded, usually for a moment: one retry after a short pause. */
+const RETRY_STATUSES = new Set([500, 503]);
 
 export const EXTRACT_PROMPT = `Sei un sistema di estrazione dati da scontrini di supermercati italiani.
 Leggi lo scontrino nella foto e restituisci SOLO dati stampati sullo scontrino, senza inventare nulla.
 
 - store.name: insegna del negozio (es. "Esselunga", "Coop", "Lidl"); store.address: indirizzo; store.vatNumber: partita IVA (solo cifre). null se non leggibili.
-- date: data dello scontrino in formato AAAA-MM-GG. null se non leggibile.
+- date: data dello scontrino in formato AAAA-MM-GG. Sugli scontrini italiani è GG/MM/AA o GG/MM/AAAA: "29/09/26" → "2026-09-29". null se non leggibile.
 - totalCents: totale pagato (riga "TOTALE" / "TOTALE COMPLESSIVO"), in centesimi di euro.
 - lines: una voce per ogni prodotto acquistato, nell'ordine dello scontrino:
-  - rawText: la descrizione esattamente come stampata, abbreviazioni comprese, SENZA prezzo e SENZA codice IVA/reparto finale.
+  - rawText: la descrizione copiata carattere per carattere come stampata, abbreviazioni e spazi compresi. Non correggere e non
+    completare le parole tronche ("500m" resta "500m", "POMOD." resta "POMOD."). SENZA prezzo, SENZA aliquota/codice IVA o
+    reparto finale e SENZA simboli iniziali che non fanno parte della descrizione (es. "*" che segnala una promozione).
   - priceCents: importo della riga in centesimi (prezzo pieno, prima degli sconti). Per "2 X 1,29" l'importo è 258.
   - discountCents: se subito dopo il prodotto c'è una riga di sconto (SCONTO, PROMO, OFFERTA, importo negativo come "-0,50"), metti qui l'importo POSITIVO dello sconto e NON creare una voce separata. Altrimenti 0.
-  - pieces: numero di pezzi solo se stampato (es. "2 X 1,29" → 2, "UOVA 6P" → 6). Altrimenti null.
+  - pieces: numero di pezzi solo se stampato (es. "2 X 1,29" → 2, "UOVA 6P" → 6). Una riga di quantità sopra o sotto il
+    prodotto (es. "2 PZ x 1,99 EUR/PZ") NON è una voce separata: vale pieces = 2 per quel prodotto, con priceCents = importo totale.
+    Altrimenti null.
   - amountGrams: peso solo se stampato (es. "0,856 kg x 1,99 €/kg" → 856). Altrimenti null.
 - Escludi righe che non sono prodotti: subtotali, totale, IVA, pagamento, resto, punti fedeltà, buoni.
 - Gli importi sono interi in centesimi: "1,79" → 179.`;
@@ -96,31 +102,39 @@ function toBase64(data: ArrayBuffer): string {
   return btoa(binary);
 }
 
-export function createGemini(opts: { apiKey: string; model: string; fetch?: typeof fetch }): ReceiptAi {
+export function createGemini(opts: { apiKey: string; model: string; fetch?: typeof fetch; retryDelayMs?: number }): ReceiptAi {
   const doFetch = opts.fetch ?? fetch;
+  const retryDelayMs = opts.retryDelayMs ?? 1500;
 
   async function generate<S extends z.ZodType>(parts: unknown[], schema: object, validator: S): Promise<z.output<S>> {
-    let res: Response;
-    try {
-      res = await doFetch(`${ENDPOINT}/${encodeURIComponent(opts.model)}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": opts.apiKey },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0 },
-        }),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-    } catch {
-      throw new AiError("Il servizio AI non risponde, riprova");
+    const body = JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { responseMimeType: "application/json", responseSchema: schema, temperature: 0 },
+    });
+    let res: Response | undefined;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, retryDelayMs));
+      try {
+        res = await doFetch(`${ENDPOINT}/${encodeURIComponent(opts.model)}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": opts.apiKey },
+          body,
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+      } catch {
+        throw new AiError("Il servizio AI non risponde, riprova");
+      }
+      if (!RETRY_STATUSES.has(res.status)) break;
     }
+    res = res!;
+    if (res.status === 503) throw new AiError("Il servizio AI è sovraccarico in questo momento, riprova tra poco");
     if (res.status === 429) throw new AiError("Limite gratuito del servizio AI raggiunto per oggi");
     if (!res.ok) throw new AiError(`Il servizio AI ha risposto con un errore (${res.status})`);
 
-    const body = (await res.json().catch(() => null)) as {
+    const data = (await res.json().catch(() => null)) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
     } | null;
-    const text = body?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
     let json: unknown;
     try {
       json = JSON.parse(text);

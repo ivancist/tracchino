@@ -158,7 +158,13 @@ export const receiptRoutes = new Hono<AppEnv>()
     if (!existing) throw notFound("Scontrino non trovato");
     const key = photoKey(id, image.mimeType);
     await c.env.RECEIPT_PHOTOS.put(key, image.data, { httpMetadata: { contentType: image.mimeType } });
-    await c.env.DB.prepare("update receipts set photo_key = ? where id = ?").bind(key, id).run();
+    try {
+      await c.env.DB.prepare("update receipts set photo_key = ? where id = ?").bind(key, id).run();
+    } catch (err) {
+      // Don't leave an object no receipt points to (the previous photo, same key or not, stays referenced).
+      if (key !== existing.photoKey) await c.env.RECEIPT_PHOTOS.delete(key).catch(() => undefined);
+      throw err;
+    }
     if (existing.photoKey && existing.photoKey !== key) await c.env.RECEIPT_PHOTOS.delete(existing.photoKey);
     return c.body(null, 204);
   })
@@ -174,7 +180,8 @@ export const receiptRoutes = new Hono<AppEnv>()
       headers: {
         "Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
         // Personal data: never in shared caches.
-        "Cache-Control": "private, max-age=3600",
+        // no-cache: a replaced or deleted photo must not linger in the browser cache.
+        "Cache-Control": "private, no-cache",
         "X-Content-Type-Options": "nosniff",
       },
     });

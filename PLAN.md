@@ -2,7 +2,7 @@
 
 Webapp personale (un solo utente) per registrare la spesa, i valori nutrizionali dei prodotti e un diario alimentare, e per analizzare quanto costa mangiare in un certo modo.
 
-Ultimo aggiornamento: 2026-10-02
+Ultimo aggiornamento: 2026-10-03
 
 ---
 
@@ -186,6 +186,8 @@ Interfaccia `ReceiptExtractor` con due implementazioni intercambiabili:
 | Note | OCR migliore, output JSON strutturato nativo. I dati gratuiti possono essere usati da Google per migliorare i modelli (accettato) | Nessuna chiave esterna, ma qualità OCR su scontrini italiani da verificare |
 
 Il tuo consumo: 3 scontrini al giorno × 2 chiamate = circa 6 richieste al giorno, entro i limiti di entrambi. Il nome del modello sta in configurazione (`AI_PROVIDER`, `GEMINI_MODEL`), perché i nomi cambiano spesso. Nel Worker c'è anche un limite di sicurezza (es. 30 scansioni al giorno).
+
+**Decisione (2026-10-03)**: Workers AI come riserva è **rimandato**. Gemini Flash-Lite ha estratto e abbinato al 100% i primi scontrini reali, il client riprova una volta su 500/503 e la quota è circa 80 volte l'uso previsto. L'interfaccia `ReceiptAi` resta pronta: la riserva si aggiunge se compaiono indisponibilità ripetute o problemi di quota.
 
 **Da verificare in Fase 3**: limiti effettivi del free tier in AI Studio per l'account e la regione (Italia), e un confronto di qualità tra i due provider su 5–10 scontrini reali di negozi diversi.
 

@@ -29,7 +29,7 @@ async function loadCatalog(db: D1Database) {
     db.prepare("select id, name, brand from products"),
     db.prepare("select chain_id as chainId, raw_text_norm as rawTextNorm, product_id as productId from product_aliases"),
     db.prepare(
-      `select s.id, s.chain_id as chainId, ch.name as chainName, s.name, s.vat_number as vatNumber
+      `select s.id, s.chain_id as chainId, ch.name as chainName, s.name, s.address, s.vat_number as vatNumber
          from stores s join chains ch on ch.id = s.chain_id
          left join receipts r on r.store_id = s.id
         group by s.id
@@ -59,7 +59,12 @@ export function createScanRoutes(aiFactory: AiFactory) {
       await bumpUsage(c.env.DB, "ai_calls");
       extracted = await ai.extract(image);
     } catch (err) {
-      if (err instanceof AiError) throw new HttpError(502, { error: "internal_error", message: err.message });
+      if (err instanceof AiError) {
+        // The provider failed (overloaded, quota, bad output): the scan doesn't count against our own cap.
+        // ai_calls keeps counting every attempt.
+        await bumpUsage(c.env.DB, "scans", -1);
+        throw new HttpError(502, { error: "internal_error", message: err.message });
+      }
       throw err;
     }
 

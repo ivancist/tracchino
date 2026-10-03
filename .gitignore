@@ -12,5 +12,7 @@ playwright-report/
 test-results/
 # Receipt photos stay local unless explicitly decided otherwise
 fixtures/receipts/*/image.*
+# Ground truth lists personal purchases: local too, until decided otherwise
+fixtures/receipts/*/expected.json
 fixtures/receipts/results/
 .DS_Store

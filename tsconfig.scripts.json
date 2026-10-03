@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.scripts.tsbuildinfo",
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"]
+  },
+  // Node scripts (eval) reuse the Worker's pure services and the browser image code.
+  "include": ["scripts", "shared", "worker/services", "src/image.ts"]
+}

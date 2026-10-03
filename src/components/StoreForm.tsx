@@ -5,20 +5,29 @@ import { ErrorText, Field } from "./ui";
 
 const NEW_CHAIN = "__new__";
 
-type Props = { store?: Store; onSaved: (id: number) => void; onCancel?: () => void };
+/** Prefill for a new store, e.g. what was read on a scanned receipt. */
+export type StoreDraft = { chainName: string | null; name: string | null; address: string | null; vatNumber: string | null };
+
+type Props = { store?: Store; initial?: StoreDraft; onSaved: (id: number) => void; onCancel?: () => void };
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 /** Store with its chain; a new chain can be created inline. */
-export function StoreForm({ store, onSaved, onCancel }: Props) {
+export function StoreForm({ store, initial, onSaved, onCancel }: Props) {
   const chains = useChains();
   const saveChain = useSaveChain();
   const saveStore = useSaveStore();
   const [error, setError] = useState<unknown>(null);
 
-  const [chainId, setChainId] = useState(store ? String(store.chainId) : "");
-  const [newChain, setNewChain] = useState("");
-  const [name, setName] = useState(store?.name ?? "");
-  const [address, setAddress] = useState(store?.address ?? "");
-  const [vatNumber, setVatNumber] = useState(store?.vatNumber ?? "");
+  // A drafted chain name picks the existing chain with that name, else prefills a new one.
+  const draftChain = initial?.chainName ? chains.data?.find((c) => sameName(c.name, initial.chainName!)) : undefined;
+  const [chainId, setChainId] = useState(
+    store ? String(store.chainId) : draftChain ? String(draftChain.id) : initial?.chainName ? NEW_CHAIN : "",
+  );
+  const [newChain, setNewChain] = useState(draftChain ? "" : (initial?.chainName ?? ""));
+  const [name, setName] = useState(store?.name ?? initial?.name ?? "");
+  const [address, setAddress] = useState(store?.address ?? initial?.address ?? "");
+  const [vatNumber, setVatNumber] = useState(store?.vatNumber ?? initial?.vatNumber ?? "");
   const busy = saveChain.isPending || saveStore.isPending;
   const noChains = chains.data?.length === 0;
   const chainChoice = noChains ? NEW_CHAIN : chainId;
