@@ -7,10 +7,16 @@ Ultimo aggiornamento: 2026-10-03 (giorno in corso anche nella Dieta)
 
 - **Produzione = `main` = `346e75b`** (versione Worker `371e9b5c`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
 - Migrazioni applicate in produzione: `0000`…`0008` (ultime: `0007_stock_adjustments`, `0008_piece_weight`). Backup pre-migrazione in `backups/` (gitignored).
+- **Prossimo passo, chiesto dall'utente: rivedere la UI della sezione Diario** (`src/pages/DiaryPage.tsx`, `src/components/DiaryEntryForm.tsx`, `RepeatMealForm.tsx`). Chiedere all'utente cosa vuole cambiare prima di progettare.
 - Tutte le fasi 0–7 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
   - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
-  - porzioni: una voce salvata conserva il peso della porzione di allora.
+  - porzioni: una voce salvata conserva il peso della porzione di allora;
+  - scontrini: confezioni distinte dai pezzi, righe uguali unite, righe "2 PZ x" agganciate per importo, prezzo a confezione;
+  - porzioni automatiche "Confezione" e "Pezzo" (= peso medio a pezzo);
+  - Fase 7: lista della spesa, scorte con correzione, consumi;
+  - navigazione: Diario · Spesa (Lista | Scontrini, pulsanti fluttuanti) · Statistiche (Spesa | Dieta) · Altro (Prodotti, Negozi, account);
+  - il giorno in corso conta solo quando colazione, pranzo e cena sono registrati (scorte e Dieta).
 - Prove reali dall'iPhone (scansione scontrino, barcode): **fatte dall'utente** (2026-10-03).
 - Ancora aperto (dettagli in fondo):
   - più scontrini per l'eval;
