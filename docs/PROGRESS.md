@@ -215,9 +215,9 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
   - kcal stimate con 2 kcal/g di fibre (UE), solo se le fibre sono note.
 - Test: 381 Vitest, 50 e2e verdi.
 
-## Sale (branch `salt`, 2026-10-03)
+## Sale (2026-10-03, in produzione)
 
-- Migrazione `0004_salt`: colonna nullable `salt_100` su `products` (solo `ALTER TABLE ADD`). Applicata in locale; **in produzione serve l'ok dell'utente** (backup → `db:migrate:remote` → deploy).
+- Migrazione `0004_salt`: colonna nullable `salt_100` su `products` (solo `ALTER TABLE ADD`). In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0004.sql`, migrazione applicata (colonna verificata), fast-forward di `main` a `1c69cb5`, deploy, smoke test → 302.
 - Ovunque, come per le fibre: form ("Sale (g)"), OFF (`salt_100g`, altrimenti `sodium_100g` × 2,5; 2 decimali), unione di prodotti, diario (riquadro con 2 decimali), analisi e simulazione.
 - Plausibilità: il sale entra nella somma ≤ 100 g (0 kcal, ma è massa).
 - Test: 382 Vitest, 50 e2e verdi.
