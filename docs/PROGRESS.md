@@ -5,8 +5,8 @@ Ultimo aggiornamento: 2026-10-03 (pezzi, scorte nell'elenco prodotti, pulsanti f
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `e9ffca7`** (versione Worker `44d4d3f9`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
-- Migrazioni applicate in produzione: `0000`…`0007` (ultime: `0006_shopping_list`, `0007_stock_adjustments`). Backup pre-migrazione in `backups/` (gitignored).
+- **Produzione = `main` = `3f087fe`** (versione Worker `cb9d0bfa`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- Migrazioni applicate in produzione: `0000`…`0008` (ultime: `0007_stock_adjustments`, `0008_piece_weight`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–7 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
   - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
@@ -314,7 +314,6 @@ Richiesta dell'utente ("c'è tanto disordine"); dettagli e scelte in PLAN Fase 7
 - Test: 475 Vitest (correzioni: stesso giorno prima/dopo, senza acquisti, ultima vince, prodotto finito suggerito, 400/404, cascade), 54 e2e (navigazione e redirect, account solo in Altro, Spesa → Consumi → scheda prodotto → correzione → "Finito" nell'elenco). Mutazione sulla regola dello stesso giorno: rilevata.
 - `security-auditor`: SECURE, due LOW: storico delle correzioni (ora si tiene solo l'ultima) e migrazione da applicare con l'ok dell'utente.
 - In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0007.sql`, migrazione applicata (tabella vuota, dati invariati), fast-forward di `main` a `e9ffca7`, deploy, smoke test (`/`, `/diario`, `/spesa`, `/spesa/scontrini`, `/altro`, `/api/pantry`, POST stock) → 302.
-- Prossimo passo chiesto dall'utente: rivedere la UI della sezione Diario.
 
 ## Pezzi, scorte nell'elenco, consumi nelle statistiche (branch `fixes-pieces-ui`)
 
@@ -326,6 +325,8 @@ Richieste dell'utente dopo la riorganizzazione.
 - UI: elenco prodotti con prezzo e scorta; pulsanti fluttuanti negli scontrini (icona SVG della fotocamera); vista Consumi tolta, dati in Statistiche → Spesa; regola CSS per lo spazio tra campi, elenchi e pulsanti consecutivi; suggerimento del campo "Peso medio a pezzo".
 - Problemi dell'ambiente trovati: il dev server aveva il Worker fermo a una versione vecchia (un ricaricamento fallito durante i mutation test) → riavviato; lo screenshot a pagina intera dell'elenco prodotti falliva perché il D1 locale contiene migliaia di prodotti degli e2e; con "Tutto" le statistiche falliscono durante la suite perché altri spec scrivono scontrini dal 1902 (periodo troppo lungo) → lo spec usa "30 giorni".
 - Test: 484 Vitest, 54 e2e. Mutazione (porzione "Pezzo" che non imposta il peso) rilevata.
+- In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0008.sql`, migrazione applicata (4 prodotti con il peso a pezzo, 31 porzioni invariate), fast-forward di `main` a `3f087fe`, deploy, smoke test → 302.
+- Prossimo passo chiesto dall'utente: la UI della sezione Diario.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
