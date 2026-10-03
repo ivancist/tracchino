@@ -201,9 +201,11 @@ export type DietAnalysis = {
   firstDiaryDate: string | null;
   summary: import("./analysis").DietSummary;
   products: ProductAnalysis[];
+  /** Today is in the period but not over in the diary (breakfast, lunch or dinner missing): left out of every figure. */
+  todayExcluded: boolean;
 };
 
-export type SimulationResult = import("./analysis").Simulation & { from: string; to: string; loggedDays: number };
+export type SimulationResult = import("./analysis").Simulation & { from: string; to: string; loggedDays: number; todayExcluded: boolean };
 
 export type MatchStatus = "alias" | "proposed" | "uncertain" | "none";
 

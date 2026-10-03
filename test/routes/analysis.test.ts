@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { DietAnalysis, SimulationResult } from "../../shared/api";
+import { todayRome } from "../../shared/dates";
 import { createTestApi } from "../helpers/api";
 import { resetDb } from "../helpers/db";
 
@@ -91,6 +92,34 @@ describe("GET /api/analysis", () => {
     expect((await api.get("/api/analysis?from=2000-01-01&to=2026-10-01")).status).toBe(400);
     expect((await api.get("/api/analysis?from=ieri")).status).toBe(400);
     expect((await api.get("/api/analysis?costMode=cheap")).status).toBe(400);
+  });
+});
+
+describe("today in progress", () => {
+  const today = todayRome();
+  const period = `from=${today}&to=${today}`; // only today: the fixtures above are on past days
+
+  it("is left out of the diet until breakfast, lunch and dinner are logged", async () => {
+    await api.post("/api/diary", { date: today, meal: "colazione", productId: banana, amount: 120 }); // 106.8 kcal so far
+    let a = (await api.get<DietAnalysis>(`/api/analysis?${period}`)).body;
+    expect(a.todayExcluded).toBe(true);
+    expect(a.summary.days).toEqual([]);
+    expect(a.summary.dailyMean.kcal).toBeNull(); // unknown, not a 106.8 kcal day
+    expect((await api.get<SimulationResult>(`/api/analysis/simulate?${period}&fromProduct=${pasta}&toProduct=${pasta}`)).body).toMatchObject({
+      loggedDays: 0,
+      todayExcluded: true,
+    });
+
+    await api.post("/api/diary", { date: today, meal: "pranzo", productId: pasta, amount: 100 }); // 359
+    await api.post("/api/diary", { date: today, meal: "cena", productId: riso, amount: 100 }); // 350
+    a = (await api.get<DietAnalysis>(`/api/analysis?${period}`)).body;
+    expect(a.todayExcluded).toBe(false);
+    expect(a.summary.days).toHaveLength(1);
+    expect(a.summary.dailyMean.kcal!).toBeCloseTo(815.8, 5); // 106.8 + 359 + 350
+  });
+
+  it("a past period is never affected", async () => {
+    expect((await api.get<DietAnalysis>(`/api/analysis?${PERIOD}`)).body.todayExcluded).toBe(false);
   });
 });
 

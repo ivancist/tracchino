@@ -132,6 +132,11 @@ export function DietAnalysis({ from, to }: { from?: string; to?: string }) {
         {formatIsoDate(a.from)} → {formatIsoDate(a.to)} · {s.days.length} {s.days.length === 1 ? "giorno registrato" : "giorni registrati"}{" "}
         (i giorni senza diario non contano) · costo: {costLabel(cost)}
       </p>
+      {a.todayExcluded && (
+        <p className="muted small" data-testid="today-excluded">
+          Oggi non è ancora nel conto: entra quando hai registrato colazione, pranzo e cena.
+        </p>
+      )}
       <div className="tiles" data-testid="diet-tiles">
         <div className="tile hero">
           <div className="tile-label">Costo medio al giorno</div>
@@ -183,10 +188,6 @@ export function DietAnalysis({ from, to }: { from?: string; to?: string }) {
                   {p.eatenEntries > 0
                     ? `mangiato in ${p.eatenDays} ${p.eatenDays === 1 ? "giorno" : "giorni"} su ${s.days.length} (${size(p, p.eatenAmount)})`
                     : "mai nel diario"}
-                  {" · "}
-                  {p.boughtLines > 0
-                    ? `comprato in ${p.boughtDays} ${p.boughtDays === 1 ? "giorno" : "giorni"} (${p.boughtUnknown > 0 ? "≥ " : p.boughtEstimated ? "≈ " : ""}${size(p, p.boughtAmount)})`
-                    : "non comprato nel periodo"}
                 </span>
               </span>
               <span className="right small value-col">

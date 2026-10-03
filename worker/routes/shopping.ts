@@ -9,7 +9,6 @@ import {
   finishedForecast,
   forecast,
   isReliable,
-  MAIN_MEALS,
   monthlyUse,
   suggestedPackages,
   type PantryConsumption,
@@ -20,6 +19,7 @@ import { applyPurchases, type BoughtLine, type ListEntry } from "../../shared/sh
 import { pantryQuery, shoppingItemInput, shoppingItemUpdate, stockInput } from "../../shared/schemas";
 import type { ProductUnit } from "../../shared/types";
 import type { AppEnv } from "../app";
+import { isDayComplete } from "../diary-day";
 import { HttpError, notFound, parseBody, parseId, parseQuery } from "../http";
 
 const MAX_LIST_ITEMS = 500;
@@ -115,7 +115,7 @@ export const pantryRoutes = new Hono<AppEnv>()
     const today = todayRome();
     const from = addDays(today, -(CONSUMPTION_WINDOW_DAYS - 1));
     const d1 = c.env.DB;
-    const [products, diary, logged, purchases, adjustments, list, todayMeals] = await d1.batch<unknown>([
+    const [products, diary, logged, purchases, adjustments, list] = await d1.batch<unknown>([
       d1
         .prepare(`select id, name, brand, unit, package_amount as packageAmount, avg_piece_amount as avgPieceAmount from products where id in ${SCOPE}`)
         .bind(from, today),
@@ -140,12 +140,8 @@ export const pantryRoutes = new Hono<AppEnv>()
          ) where rn = 1`,
       ),
       d1.prepare("select distinct product_id as productId from shopping_list_items where product_id is not null"),
-      d1.prepare("select distinct meal from diary_entries where date = ?").bind(today),
     ]);
-
-    // Today is a full day only once breakfast, lunch and dinner are logged.
-    const mealsToday = new Set((todayMeals!.results as { meal: string }[]).map((r) => r.meal));
-    const todayComplete = MAIN_MEALS.every((m) => mealsToday.has(m));
+    const todayComplete = await isDayComplete(d1, today);
     const loggedDays = (logged!.results as { date: string }[]).map((r) => r.date);
     const inList = new Set((list!.results as { productId: number }[]).map((r) => r.productId));
     const latestAdjustment = new Map((adjustments!.results as (StockAdjustment & { productId: number })[]).map((a) => [a.productId, a]));

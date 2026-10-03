@@ -164,6 +164,8 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 - Decisioni (2026-10-03):
   - In Statistiche, vista "Dieta" accanto a "Spesa", con gli stessi periodi (predefinito: dal primo giorno del diario a oggi).
   - Le medie della dieta contano **solo i giorni registrati**: un giorno senza diario non è un giorno a costo 0 (diverso dalla spesa, dove i giorni senza scontrini valgono 0). A settimana = 7 × media giornaliera, indicata come stima.
+  - **Il giorno in corso** resta fuori da medie, elenco e simulazione finché non sono registrati colazione, pranzo e cena (richiesta dell'utente, 2026-10-03): un giorno a metà sembrerebbe leggero. La pagina lo segnala.
+  - Nell'elenco "Valore dei prodotti" non si ripete "comprato in X giorni (N kg)" (richiesta dell'utente).
   - Costi come nel diario (stessa modalità e finestra); le voci senza costo sono escluse e contate.
   - Costo per 100 kcal e per 10 g di proteine di ogni prodotto, al costo dell'ultimo giorno del periodo, non arrotondato al centesimo (sotto i 10 cent si mostrano 3 decimali). Il costo per 100 kcal della dieta usa solo le voci che hanno sia costo sia kcal.
   - La simulazione rifiuta prodotti in grammi contro prodotti in millilitri; un fattore piccolo lascia almeno 1 g.

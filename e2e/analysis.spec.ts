@@ -74,6 +74,7 @@ test("analisi della dieta: costo medio, valore dei prodotti, simulazione di una 
   await expect(pastaRow).toContainText(euro("0,053"));
   await expect(pastaRow).toContainText(euro("0,15"));
   await expect(pastaRow).toContainText("mangiato in 2 giorni su 2 (180 g)");
+  await expect(pastaRow).not.toContainText("comprato"); // purchases are not repeated in this list
   await expect(page.getByTestId("product-value-row").filter({ hasText: `Olio ${tag}` })).toContainText("n.d. /100 kcal");
   // Cheapest protein first: pasta (0.15 €) before bananas (2.26 €)
   await page.getByRole("button", { name: "€ per 10 g proteine" }).click();

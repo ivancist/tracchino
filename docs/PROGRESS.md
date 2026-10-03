@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (consumo a pasto, giorno in corso)
+Ultimo aggiornamento: 2026-10-03 (giorno in corso anche nella Dieta)
 
 ## Riprendere da qui
 
@@ -335,7 +335,13 @@ Richieste dell'utente dopo la riorganizzazione.
 - Liste: classe `.brand` (marca più piccola) in Prodotti, Statistiche, Diario; scorta su una riga (`.nowrap`, "pz").
 - Test: 486 Vitest (riso 3 pasti da 100 g: prima di cena 75 g/giorno su 4 giorni, a cena 80 su 5, giornata finita senza riso 60 su 5), 54 e2e. Mutazione (oggi sempre contato) rilevata.
 - In produzione dal 2026-10-03 (solo codice, nessuna migrazione): fast-forward di `main` a `04878a3`, deploy, smoke test → 302.
-- Da chiedere all'utente: la stessa regola del giorno in corso vale anche per le medie della Dieta (Statistiche → Dieta), che oggi contano il giorno in corso anche se incompleto.
+- Stessa regola applicata alla Dieta su richiesta dell'utente (vedi sotto).
+
+## Dieta: giorno in corso escluso finché non è concluso (branch `diet-today`)
+
+- `worker/diary-day.ts` `isDayComplete` (colazione, pranzo, cena), usato da `/api/pantry` e da `/api/analysis` (+ `simulate`): oggi resta fuori da medie, elenco e simulazione finché è incompleto; `todayExcluded` nella risposta e avviso nella pagina.
+- Elenco "Valore dei prodotti": tolto "comprato in X giorni (N kg)".
+- Test: 488 Vitest (solo colazione → escluso, media n.d.; con pranzo e cena → 815,8 kcal), 54 e2e. Mutazione (oggi mai escluso) rilevata.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").

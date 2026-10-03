@@ -17,6 +17,7 @@ import type { ProductQuantityInfo } from "../../shared/pricing";
 import { analysisQuery, simulateQuery } from "../../shared/schemas";
 import type { ProductUnit } from "../../shared/types";
 import type { AppEnv } from "../app";
+import { isDayComplete } from "../diary-day";
 import { HttpError, parseQuery } from "../http";
 
 const MAX_DAYS = 3700;
@@ -70,12 +71,18 @@ async function loadCatalog(db: D1Database, productIds: number[], costMode: CostM
   return { byId, cost, nutrition: (id: number) => byId.get(id) ?? null };
 }
 
+/**
+ * Diary rows of the period. Averages are per logged day, so a day still in progress would look like a light one:
+ * today is left out until breakfast, lunch and dinner are logged.
+ */
 async function diaryRows(db: D1Database, from: string, to: string) {
   const { results } = await db
     .prepare("select date, product_id as productId, amount from diary_entries where date between ? and ? order by date, id")
     .bind(from, to)
     .all<DiaryRow>();
-  return results;
+  const today = todayRome();
+  const todayExcluded = from <= today && today <= to && results.some((r) => r.date === today) && !(await isDayComplete(db, today));
+  return { rows: todayExcluded ? results.filter((r) => r.date !== today) : results, todayExcluded };
 }
 
 export const analysisRoutes = new Hono<AppEnv>()
@@ -83,7 +90,7 @@ export const analysisRoutes = new Hono<AppEnv>()
     const query = parseQuery(c, analysisQuery);
     const { from, to, firstDiaryDate } = await period(c, query);
     const db = c.env.DB;
-    const rows = await diaryRows(db, from, to);
+    const { rows, todayExcluded } = await diaryRows(db, from, to);
     const { results: boughtInPeriod } = await db
       .prepare(
         `select ri.product_id as productId, r.date, ri.packages, ri.pieces, ri.amount
@@ -102,13 +109,13 @@ export const analysisRoutes = new Hono<AppEnv>()
       })
       .sort((a, b) => b.eatenAmount - a.eatenAmount || b.boughtAmount - a.boughtAmount || a.name.localeCompare(b.name));
 
-    const body: DietAnalysis = { from, to, firstDiaryDate, summary: dietSummary(rows, catalog.nutrition, catalog.cost), products };
+    const body: DietAnalysis = { from, to, firstDiaryDate, summary: dietSummary(rows, catalog.nutrition, catalog.cost), products, todayExcluded };
     return c.json(body);
   })
   .get("/simulate", async (c) => {
     const query = parseQuery(c, simulateQuery);
     const { from, to } = await period(c, query);
-    const rows = await diaryRows(c.env.DB, from, to);
+    const { rows, todayExcluded } = await diaryRows(c.env.DB, from, to);
     const catalog = await loadCatalog(c.env.DB, [query.fromProduct, query.toProduct], query.costMode, query.windowDays);
     const a = catalog.byId.get(query.fromProduct);
     const b = catalog.byId.get(query.toProduct);
@@ -124,6 +131,7 @@ export const analysisRoutes = new Hono<AppEnv>()
       from,
       to,
       loggedDays: new Set(rows.map((r) => r.date)).size,
+      todayExcluded,
     };
     return c.json(body);
   });
