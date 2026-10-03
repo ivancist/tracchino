@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (pezzi, scorte nell'elenco prodotti, pulsanti fluttuanti)
+Ultimo aggiornamento: 2026-10-03 (consumo a pasto, giorno in corso)
 
 ## Riprendere da qui
 
@@ -327,6 +327,14 @@ Richieste dell'utente dopo la riorganizzazione.
 - Test: 484 Vitest, 54 e2e. Mutazione (porzione "Pezzo" che non imposta il peso) rilevata.
 - In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0008.sql`, migrazione applicata (4 prodotti con il peso a pezzo, 31 porzioni invariate), fast-forward di `main` a `3f087fe`, deploy, smoke test → 302.
 - Prossimo passo chiesto dall'utente: la UI della sezione Diario.
+
+## Consumo a pasto e giorno in corso (branch `consumption-per-meal`)
+
+- `consumptionRate`: `typicalMeal` (mediana dei pasti con il prodotto; le voci dello stesso pasto si sommano) e il giorno in corso contato solo se colazione, pranzo e cena sono registrati (`MAIN_MEALS`) o se il prodotto è già stato mangiato oggi.
+- "Dove vanno i soldi": "100 g a pasto · 1 confezione ogni N giorni · X al mese · € al mese", senza frequenza. La scheda prodotto mantiene la frequenza.
+- Liste: classe `.brand` (marca più piccola) in Prodotti, Statistiche, Diario; scorta su una riga (`.nowrap`, "pz").
+- Test: 486 Vitest (riso 3 pasti da 100 g: prima di cena 75 g/giorno su 4 giorni, a cena 80 su 5, giornata finita senza riso 60 su 5), 54 e2e. Mutazione (oggi sempre contato) rilevata.
+- Da chiedere all'utente: la stessa regola del giorno in corso vale anche per le medie della Dieta (Statistiche → Dieta), che oggi contano il giorno in corso anche se incompleto.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").

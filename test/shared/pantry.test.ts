@@ -75,7 +75,7 @@ describe("estimateStock", () => {
 
 describe("consumptionRate", () => {
   it("divides by the logged days since the product was first eaten (yogurt 800 g / 4 days = 200, not 800 / 5)", () => {
-    expect(consumptionRate(daily(200), LOGGED, TODAY)).toEqual({ perDay: 200, typicalDay: 200, days: 4, eatenDays: 4 });
+    expect(consumptionRate(daily(200), LOGGED, TODAY)).toEqual({ perDay: 200, typicalDay: 200, typicalMeal: 200, days: 4, eatenDays: 4 });
   });
 
   it("days without a diary don't count", () => {
@@ -102,21 +102,54 @@ describe("consumptionRate", () => {
 
   it("needs at least 3 logged days to be reliable (one meal of tuna today is not 224 g a day)", () => {
     expect(isReliable(consumptionRate([{ date: TODAY, amount: 224 }], LOGGED, TODAY)!)).toBe(false); // 1 day
-    expect(isReliable(consumptionRate([{ date: "2026-10-02", amount: 224 }], LOGGED, TODAY)!)).toBe(false); // 2 days
-    expect(isReliable(consumptionRate([{ date: "2026-10-01", amount: 224 }], LOGGED, TODAY)!)).toBe(true); // 3 days
-    // The owner's tuna, eaten on 29/9: 224 g over 5 logged days = 44.8 g/day
-    expect(consumptionRate([{ date: "2026-09-29", amount: 224 }], LOGGED, TODAY)).toEqual({ perDay: 44.8, typicalDay: 224, days: 5, eatenDays: 1 });
+    expect(isReliable(consumptionRate([{ date: "2026-10-01", amount: 224 }], LOGGED, TODAY)!)).toBe(false); // 1/10, 2/10 (today not over)
+    expect(isReliable(consumptionRate([{ date: "2026-09-30", amount: 224 }], LOGGED, TODAY)!)).toBe(true); // 30/9, 1/10, 2/10
+    // The owner's tuna, eaten on 29/9: 224 g over 29/9…2/10 = 56 g/day (today, not over yet and without tuna, doesn't count)
+    expect(consumptionRate([{ date: "2026-09-29", amount: 224 }], LOGGED, TODAY)).toEqual({ perDay: 56, typicalDay: 224, typicalMeal: 224, days: 4, eatenDays: 1 });
+    // Once today's main meals are logged it counts: 224 g / 5 days
+    expect(consumptionRate([{ date: "2026-09-29", amount: 224 }], LOGGED, TODAY, 30, true)?.perDay).toBe(44.8);
+  });
+
+  it("rice: 100 g at a meal on 3 of the 4 finished days → 100 g a meal; today counts only when over or when eaten", () => {
+    const rice = [
+      { date: "2026-09-29", amount: 100, meal: "pranzo" },
+      { date: "2026-10-01", amount: 100, meal: "cena" },
+      { date: "2026-10-02", amount: 100, meal: "pranzo" },
+    ];
+    // Before dinner today: 29/9…2/10 → 300 g / 4 days; each meal with rice had 100 g
+    expect(consumptionRate(rice, LOGGED, TODAY)).toMatchObject({ perDay: 75, typicalMeal: 100, days: 4, eatenDays: 3 });
+    // Rice at dinner: today counts (eaten) → 400 g / 5 days, 4 days of 5
+    const dinner = [...rice, { date: TODAY, amount: 100, meal: "cena" }];
+    expect(consumptionRate(dinner, LOGGED, TODAY)).toMatchObject({ perDay: 80, typicalMeal: 100, days: 5, eatenDays: 4 });
+    // Day over without rice (breakfast, lunch, dinner logged): today counts → 300 g / 5 days
+    expect(consumptionRate(rice, LOGGED, TODAY, 30, true)).toMatchObject({ perDay: 60, days: 5, eatenDays: 3 });
+  });
+
+  it("a meal sums its entries; the typical meal is the median of meals that had the product", () => {
+    const r = consumptionRate(
+      [
+        { date: "2026-10-01", amount: 50, meal: "pranzo" },
+        { date: "2026-10-01", amount: 50, meal: "pranzo" }, // same lunch: 100 g
+        { date: "2026-10-01", amount: 30, meal: "cena" },
+        { date: "2026-10-02", amount: 120, meal: "pranzo" },
+      ],
+      LOGGED,
+      TODAY,
+    );
+    expect(r?.typicalMeal).toBe(100); // meals: 100, 30, 120 → median 100
+    expect(r?.typicalDay).toBe(125); // days: 130, 120 → 125
   });
 
   it("only the last 30 days count; nothing eaten in them → null", () => {
     const old = [{ date: "2026-09-03", amount: 500 }]; // 30 days before 3/10: outside (window is 4/9…3/10)
     expect(consumptionRate(old, LOGGED, TODAY)).toBeNull();
-    expect(consumptionRate([{ date: "2026-09-04", amount: 300 }], ["2026-09-04", TODAY], TODAY)?.perDay).toBe(150);
+    expect(consumptionRate([{ date: "2026-09-04", amount: 300 }], ["2026-09-04", TODAY], TODAY)?.perDay).toBe(300); // today not over: 1 day
+    expect(consumptionRate([{ date: "2026-09-04", amount: 300 }], ["2026-09-04", TODAY], TODAY, 30, true)?.perDay).toBe(150);
   });
 });
 
 describe("forecast and suggestions", () => {
-  const rate = (perDay: number, typicalDay = perDay) => ({ perDay, typicalDay, days: 4, eatenDays: 4 });
+  const rate = (perDay: number, typicalDay = perDay) => ({ perDay, typicalDay, typicalMeal: typicalDay, days: 4, eatenDays: 4 });
 
   it("yogurt 200 g at 200 g/day runs out tomorrow: urgent", () => {
     expect(forecast(200, rate(200), TODAY)).toEqual({ daysLeft: 1, runOutDate: "2026-10-04", urgency: "soon" });
@@ -145,7 +178,7 @@ describe("forecast and suggestions", () => {
 
 describe("monthlyUse", () => {
   it("yogurt: 1 package every 5 days, 6 a month, 6 kg × 4,40 €/kg = 26,40 €", () => {
-    expect(monthlyUse({ perDay: 200, typicalDay: 200, days: 4, eatenDays: 4 }, 1000, cost(440, 1000))).toEqual({
+    expect(monthlyUse({ perDay: 200, typicalDay: 200, typicalMeal: 200, days: 4, eatenDays: 4 }, 1000, cost(440, 1000))).toEqual({
       packageEveryDays: 5,
       packagesPerMonth: 6,
       costPerMonthCents: 2640,
@@ -153,7 +186,7 @@ describe("monthlyUse", () => {
   });
 
   it("chia: every 10 days, 3 a month, 450 g × 1,99 € / 150 g = 5,97 €", () => {
-    expect(monthlyUse({ perDay: 15, typicalDay: 15, days: 4, eatenDays: 4 }, 150, cost(199, 150))).toEqual({
+    expect(monthlyUse({ perDay: 15, typicalDay: 15, typicalMeal: 15, days: 4, eatenDays: 4 }, 150, cost(199, 150))).toEqual({
       packageEveryDays: 10,
       packagesPerMonth: 3,
       costPerMonthCents: 597,
@@ -161,8 +194,8 @@ describe("monthlyUse", () => {
   });
 
   it("unknown cost stays null (never bought), never 0; no package → only the cost", () => {
-    expect(monthlyUse({ perDay: 50, typicalDay: 50, days: 4, eatenDays: 4 }, 454, null)).toMatchObject({ costPerMonthCents: null, packagesPerMonth: 3.303964757709251 });
-    expect(monthlyUse({ perDay: 120, typicalDay: 120, days: 2, eatenDays: 2 }, null, cost(47, 480))).toEqual({
+    expect(monthlyUse({ perDay: 50, typicalDay: 50, typicalMeal: 50, days: 4, eatenDays: 4 }, 454, null)).toMatchObject({ costPerMonthCents: null, packagesPerMonth: 3.303964757709251 });
+    expect(monthlyUse({ perDay: 120, typicalDay: 120, typicalMeal: 120, days: 2, eatenDays: 2 }, null, cost(47, 480))).toEqual({
       packageEveryDays: null,
       packagesPerMonth: null,
       costPerMonthCents: 353, // 3600 g × 47 / 480 = 352.5 → 353

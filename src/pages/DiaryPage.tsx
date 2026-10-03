@@ -156,7 +156,7 @@ export function DiaryPage() {
                       <li key={e.id}>
                         <button type="button" className="list-item plain" data-testid="diary-entry" onClick={() => setEditing({ meal, entry: e })}>
                           <span>
-                            <strong>{e.productName}</strong> {e.productBrand && <span className="muted">{e.productBrand}</span>}
+                            <strong>{e.productName}</strong> {e.productBrand && <span className="brand">{e.productBrand}</span>}
                             <br />
                             <span className="muted small">{entryQuantity(e)}</span>
                           </span>

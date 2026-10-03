@@ -159,9 +159,15 @@ describe("/api/pantry", () => {
   it("no forecast nor monthly use from fewer than 3 logged days", async () => {
     await api.receipt({ storeId, date: day(-1), items: [{ productId: tuna, priceFullCents: 119, packages: 1 }] });
     await api.post("/api/diary", { date: day(-1), meal: "pranzo", productId: tuna, amount: 100 });
-    await api.post("/api/diary", { date: day(0), meal: "colazione", productId: yogurtA, amount: 200 }); // today is logged too
+    await api.post("/api/diary", { date: day(0), meal: "colazione", productId: yogurtA, amount: 200 }); // today: only breakfast so far
     const t = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === tuna);
-    expect(t).toMatchObject({ rate: { days: 2 }, stock: { amount: 12 }, forecast: null, packagesPerMonth: null, costPerMonthCents: null });
+    // Today isn't over (no lunch nor dinner) and had no tuna: 1 day
+    expect(t).toMatchObject({ rate: { days: 1 }, stock: { amount: 12 }, forecast: null, packagesPerMonth: null, costPerMonthCents: null });
+    // Lunch and dinner logged: today is a full day → 2
+    await api.post("/api/diary", { date: day(0), meal: "pranzo", productId: yogurtA, amount: 100 });
+    await api.post("/api/diary", { date: day(0), meal: "cena", productId: yogurtA, amount: 100 });
+    const t2 = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === tuna);
+    expect(t2?.rate).toMatchObject({ days: 2, typicalMeal: 100 });
   });
 
   it("flags products already on the list, and validates its query", async () => {

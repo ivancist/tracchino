@@ -1065,6 +1065,16 @@ ul.notice {
   margin-top: 0.15rem;
 }
 
+/* Brand next to a product name in lists: present, but quieter than the name */
+.brand {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
 .badge.first {
   margin-left: 0;
 }

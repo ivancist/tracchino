@@ -14,7 +14,7 @@ export function frequencyText(item: PantryItem): string | null {
   return `Mangiato in ${eatenDays} ${eatenDays === 1 ? "giorno" : "giorni"} su ${days} ${days === 1 ? "registrato" : "registrati"}`;
 }
 
-/** "200 g al giorno · 1 confezione ogni 5 giorni · 6 al mese · 26,40 € al mese" */
+/** "100 g a pasto · 1 confezione ogni 5 giorni · 6 al mese · 26,40 € al mese" (per meal: what is actually eaten each time). */
 export function consumptionText(item: PantryItem): string {
   if (!item.rate) return "Non mangiato negli ultimi 30 giorni";
   if (item.rate.days < MIN_RATE_DAYS) {
@@ -22,7 +22,7 @@ export function consumptionText(item: PantryItem): string {
     return `Diario di ${days} da quando l'hai mangiato: per consumi e previsioni ne servono almeno ${MIN_RATE_DAYS}`;
   }
   return [
-    `${grams(item.rate.perDay, item.unit)} al giorno`,
+    `${grams(item.rate.typicalMeal, item.unit)} a pasto`,
     item.packageEveryDays != null && `1 confezione ogni ${formatNumber(item.packageEveryDays)} giorni`,
     item.packagesPerMonth != null && `${formatNumber(item.packagesPerMonth)} al mese`,
     item.costPerMonthCents != null ? `${item.costEstimated ? "≈ " : ""}${formatCents(item.costPerMonthCents)} al mese` : "costo n.d.",

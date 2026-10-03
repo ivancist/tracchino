@@ -264,10 +264,10 @@ export type PantryItem = {
   /** Latest receipt line (raw: paid cents, packages, pieces, grams) — price per package or per kg at a glance. */
   lastPurchase: { date: string; paidCents: number; packages: number | null; pieces: number | null; amount: number | null } | null;
   /**
-   * Consumption over the last 30 days: g/ml per logged day, on a typical day it is eaten, logged days since first eaten
+   * Consumption over the last 30 days: g/ml per logged day, on a typical day and in a typical meal it is eaten, logged days since first eaten
    * (under MIN_RATE_DAYS: no forecast nor monthly use) and days eaten. null when not eaten lately (stock corrected only).
    */
-  rate: { perDay: number; typicalDay: number; days: number; eatenDays: number } | null;
+  rate: { perDay: number; typicalDay: number; typicalMeal: number; days: number; eatenDays: number } | null;
   /** null: never bought in the app nor corrected, or a purchase with unknown quantity. */
   stock: { amount: number; estimated: boolean; since: string; corrected: boolean } | null;
   forecast: { daysLeft: number; runOutDate: string; urgency: "finished" | "soon" | "week" | null } | null;

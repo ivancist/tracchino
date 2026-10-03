@@ -87,7 +87,7 @@ export function ProductsPage() {
             <li key={p.id}>
               <Link to={`/prodotti/${p.id}`} className="list-item" data-testid="product-row">
                 <span>
-                  <strong>{p.name}</strong> {p.brand && <span className="muted">{p.brand}</span>}
+                  <strong>{p.name}</strong> {p.brand && <span className="brand">{p.brand}</span>}
                   <br />
                   <span className="muted small">
                     {[
@@ -103,7 +103,7 @@ export function ProductsPage() {
                   {stock && isFinished(stock) ? (
                     <span className="badge finished first">Finito</span>
                   ) : stock?.stock ? (
-                    <span className="small">{leftText(stock)}</span>
+                    <span className="small nowrap">{leftText(stock)}</span>
                   ) : null}
                 </span>
               </Link>

@@ -26,10 +26,10 @@ const eur = (s: string) => s.replace(/\u00a0/g, " "); // Intl puts a no-break sp
 
 describe("leftText", () => {
   it("counts pieces for products bought by the piece (bananas 120 g, eggs 65 g)", () => {
-    expect(leftText(item({ avgPieceAmount: 120, stock: stock(240, true) }))).toBe("≈ 2 pezzi (240 g)");
-    expect(leftText(item({ avgPieceAmount: 65, stock: stock(195, true) }))).toBe("≈ 3 pezzi (195 g)");
-    expect(leftText(item({ avgPieceAmount: 120, stock: stock(120, true) }))).toBe("≈ 1 pezzo (120 g)");
-    expect(leftText(item({ avgPieceAmount: 120, stock: stock(40, true) }))).toBe("meno di 1 pezzo (40 g)");
+    expect(leftText(item({ avgPieceAmount: 120, stock: stock(240, true) }))).toBe("≈ 2 pz (240 g)");
+    expect(leftText(item({ avgPieceAmount: 65, stock: stock(195, true) }))).toBe("≈ 3 pz (195 g)");
+    expect(leftText(item({ avgPieceAmount: 120, stock: stock(120, true) }))).toBe("≈ 1 pz (120 g)");
+    expect(leftText(item({ avgPieceAmount: 120, stock: stock(40, true) }))).toBe("meno di 1 pz (40 g)");
   });
 
   it("stays in grams for packaged products, even with pieces inside (carrots 500 g)", () => {

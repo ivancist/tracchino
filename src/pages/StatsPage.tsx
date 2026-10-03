@@ -6,7 +6,7 @@ import { BarChart } from "../components/charts";
 import { DietAnalysis } from "../components/DietAnalysis";
 import { Field, PageHeader, QueryState } from "../components/ui";
 import { storedCost } from "../costPreference";
-import { consumptionText, frequencyText } from "../pantryText";
+import { consumptionText } from "../pantryText";
 import { usePantry, useSpending, useTopProducts } from "../queries";
 
 type Preset = "all" | "30d" | "12w" | "year" | "custom";
@@ -176,7 +176,7 @@ export function StatsPage() {
                       <Link to={`/prodotti/${t.productId}`} className="rank-row">
                         <span className="rank-top">
                           <span>
-                            <strong>{t.name}</strong> {t.brand && <span className="muted">{t.brand}</span>}
+                            <strong>{t.name}</strong> {t.brand && <span className="brand">{t.brand}</span>}
                           </span>
                           <strong>{formatCents(t.totalCents)}</strong>
                         </span>
@@ -186,7 +186,7 @@ export function StatsPage() {
                         </span>
                         {eatenById.get(t.productId) && (
                           <span className="small rank-detail" data-testid="top-consumption">
-                            {frequencyText(eatenById.get(t.productId)!)} · {consumptionText(eatenById.get(t.productId)!)}
+                            {consumptionText(eatenById.get(t.productId)!)}
                           </span>
                         )}
                         <div className="rowbar" style={{ width: `${(t.totalCents / maxTop) * 100}%` }} aria-hidden="true" />

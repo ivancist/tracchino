@@ -20,13 +20,13 @@ export const isFinished = (item: PantryItem) => item.stock != null && item.stock
 /** Bought and counted by the piece (bananas, eggs): stock is shown in pieces. Packaged products stay in g/ml. */
 const byPiece = (item: PantryItem) => item.avgPieceAmount != null && item.packageAmount == null;
 
-/** "480 g", "≈ 3 pezzi (195 g)", "meno di 1 pezzo (40 g)". */
+/** "480 g", "≈ 3 pz (195 g)", "meno di 1 pz (40 g)" (short: it sits on one line next to the product). */
 export function leftText(item: PantryItem): string {
   const s = item.stock!;
   const g = grams(s.amount, item.unit);
   if (byPiece(item)) {
     const n = Math.round(s.amount / item.avgPieceAmount!);
-    return n < 1 ? `meno di 1 pezzo (${g})` : `≈ ${n} ${n === 1 ? "pezzo" : "pezzi"} (${g})`;
+    return n < 1 ? `meno di 1 pz (${g})` : `≈ ${n} pz (${g})`;
   }
   return `${s.estimated ? "≈ " : ""}${g}`;
 }

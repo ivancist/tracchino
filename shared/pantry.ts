@@ -15,7 +15,7 @@ export const MIN_RATE_DAYS = 3;
 
 /** `createdAt` (ms) orders same-day records against a stock correction made that day. */
 export type PantryPurchase = ItemQuantity & { date: string; createdAt?: number };
-export type PantryConsumption = { date: string; amount: number; createdAt?: number };
+export type PantryConsumption = { date: string; amount: number; createdAt?: number; meal?: string };
 /** "On `date` I have `amount` g/ml left" (the owner shares meals and logs only their own portions). */
 export type StockAdjustment = { date: string; amount: number; createdAt: number };
 
@@ -64,37 +64,60 @@ export type Rate = {
   perDay: number;
   /** Median grams/ml eaten on a day the product was eaten (e.g. tuna: 2 cans at a time). */
   typicalDay: number;
+  /** Median grams/ml eaten in one meal that has it (rice: 100 g each time, however many days pass in between). */
+  typicalMeal: number;
   /** Logged days the rate is computed on. */
   days: number;
   /** Days the product was eaten in the window (frequency: eaten on `eatenDays` of `days` logged days). */
   eatenDays: number;
 };
 
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+};
+
 /**
  * Consumption over the last CONSUMPTION_WINDOW_DAYS: grams eaten / diary days logged since the product was first eaten
  * in the window (yogurt 4 × 200 g on 4 logged days → 200 g/day). Days without a diary don't count, as in the diet
- * analysis. null when not eaten in the window.
+ * analysis. Today counts only once it is over in the diary (`todayComplete`: its main meals are logged) or if the
+ * product was already eaten today: rice before dinner is not "not eaten today". null when not eaten in the window.
  */
 export function consumptionRate(
   consumption: readonly PantryConsumption[],
   loggedDays: readonly string[],
   today: string,
   windowDays: number = CONSUMPTION_WINDOW_DAYS,
+  todayComplete = false,
 ): Rate | null {
   const from = addDays(today, -(windowDays - 1));
   const eaten = consumption.filter((c) => c.date >= from && c.date <= today);
   if (eaten.length === 0) return null;
   const first = eaten.reduce((min, c) => (c.date < min ? c.date : min), eaten[0]!.date);
-  const days = new Set([...loggedDays.filter((d) => d >= first && d <= today), ...eaten.map((c) => c.date)]).size;
+  const eatenToday = eaten.some((c) => c.date === today);
+  const counted = (d: string) => d >= first && (d < today || (d === today && (todayComplete || eatenToday)));
+  const days = new Set([...loggedDays.filter(counted), ...eaten.map((c) => c.date)]).size;
 
   const byDay = new Map<string, number>();
-  for (const c of eaten) byDay.set(c.date, (byDay.get(c.date) ?? 0) + c.amount);
-  const sorted = [...byDay.values()].sort((a, b) => a - b);
-  const mid = sorted.length >> 1;
-  const typicalDay = sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+  const byMeal = new Map<string, number>();
+  for (const c of eaten) {
+    byDay.set(c.date, (byDay.get(c.date) ?? 0) + c.amount);
+    const meal = `${c.date}|${c.meal ?? ""}`;
+    byMeal.set(meal, (byMeal.get(meal) ?? 0) + c.amount);
+  }
 
-  return { perDay: eaten.reduce((s, c) => s + c.amount, 0) / days, typicalDay, days, eatenDays: byDay.size };
+  return {
+    perDay: eaten.reduce((s, c) => s + c.amount, 0) / days,
+    typicalDay: median([...byDay.values()]),
+    typicalMeal: median([...byMeal.values()]),
+    days,
+    eatenDays: byDay.size,
+  };
 }
+
+/** Meals that close a diary day: once all are logged, today counts as a full day. */
+export const MAIN_MEALS = ["colazione", "pranzo", "cena"] as const;
 
 export const isReliable = (rate: Rate) => rate.days >= MIN_RATE_DAYS;
 

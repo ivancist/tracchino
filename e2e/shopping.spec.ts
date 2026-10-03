@@ -67,8 +67,7 @@ test("spesa: suggerito → aggiunto → scontrino → esce; consumi in statistic
     await page.getByRole("button", { name: "30 giorni" }).click();
     await expect(page.getByTestId("stats-tiles")).toContainText("Al mese, ai consumi attuali");
     const top = page.getByTestId("top-products").getByRole("link").filter({ hasText: `Yogurt ${tag}` });
-    await expect(top.getByTestId("top-consumption")).toContainText("Mangiato in 4 giorni su 4 registrati · 200 g al giorno · 1 confezione ogni 5 giorni · 6 al mese");
-    await expect(top.getByTestId("top-consumption")).toContainText(/26,40\s€ al mese/);
+    await expect(top.getByTestId("top-consumption")).toHaveText(/^200 g a pasto · 1 confezione ogni 5 giorni · 6 al mese · 26,40\s€ al mese$/);
     await page.screenshot({ path: info.outputPath("stats.png"), fullPage: true });
 
     // Product page: package and its price first, then stock and consumption
