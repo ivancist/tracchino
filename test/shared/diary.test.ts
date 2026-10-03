@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MEALS as DB_MEALS } from "../../db/schema";
-import { costCents, groupRecentMeals, mealKey, MEALS, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
+import { costCents, groupRecentMeals, mealKey, MEALS, savedPortionGrams, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
 
 const banana = { kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8, sugars100: null, saturatedFat100: 0.1, fiber100: 2.6, salt100: 0.01 };
 
@@ -98,7 +98,13 @@ describe("portions", () => {
     expect(portionAmount(120, 1.5)).toBe(180);
     expect(portionAmount(33, 2.5)).toBe(83); // 82.5 → 83
   });
-  it("meals match the database constraint", () => {
+  it("a saved entry remembers the portion weight it was recorded with", () => {
+    expect(savedPortionGrams({ amount: 83, portionQty: 2.5 })).toBeCloseTo(33.2, 10);
+    expect(portionAmount(savedPortionGrams({ amount: 83, portionQty: 2.5 })!, 2.5)).toBe(83); // round trip
+    expect(savedPortionGrams({ amount: 80, portionQty: null })).toBeNull();
+  });
+
+    it("meals match the database constraint", () => {
     expect(MEALS).toEqual(DB_MEALS);
   });
 });

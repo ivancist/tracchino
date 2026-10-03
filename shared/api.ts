@@ -174,6 +174,8 @@ export type PastMealItem = import("./diary").MealItem & {
   unit: ProductUnit;
   groupId: number | null;
   portionName: string | null;
+  /** The portion's weight today (what repeating it will use); null without a portion or if it was deleted. */
+  portionAmount: number | null;
 };
 /** A past meal; `dates` lists every day it was eaten exactly like this, newest first. */
 export type PastMeal = { dates: string[]; items: PastMealItem[] };

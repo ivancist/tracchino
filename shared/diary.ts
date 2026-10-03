@@ -115,6 +115,14 @@ export function portionAmount(portionGrams: number, qty: number): number {
   return Math.round(portionGrams * qty);
 }
 
+/**
+ * Grams of one portion as it was when a saved entry was recorded (its grams / its quantity). Editing a past entry
+ * with the same portion uses this, so resizing "1 vasetto" later never rewrites history.
+ */
+export function savedPortionGrams(entry: { amount: number; portionQty: number | null }): number | null {
+  return entry.portionQty ? entry.amount / entry.portionQty : null;
+}
+
 /** One item of a past meal, as needed to repeat it. */
 export type MealItem = { productId: number; amount: number; portionId: number | null; portionQty: number | null };
 

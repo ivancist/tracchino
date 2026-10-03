@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import type { PastMeal, PastMealItem, Product } from "../../shared/api";
 import { formatIsoDate } from "../../shared/dates";
-import { MEAL_LABELS, portionAmount, type Meal } from "../../shared/diary";
+import { MEAL_LABELS, portionAmount, savedPortionGrams, type Meal } from "../../shared/diary";
 import { formatAmount, parseAmount } from "../../shared/quantity";
 import { diaryBatchInput } from "../../shared/schemas";
 import { formatNumber, parseDecimalInput } from "../format";
@@ -169,9 +169,11 @@ export function RepeatMealForm({ date, meal, onDone }: { date: string; meal: Mea
                           />
                         </Field>
                       )}
-                      {l.usePortion && l.original.portionId != null && parseDecimalInput(l.qtyText) != null && (
-                        <p className="muted small">
-                          ≈ {formatAmount(portionAmount(l.original.amount / (l.original.portionQty ?? 1), parseDecimalInput(l.qtyText)!), unitOf(l.original))}
+                      {l.usePortion && l.original.portionAmount != null && parseDecimalInput(l.qtyText) != null && (
+                        <p className="muted small" data-testid="repeat-portion-grams">
+                          = {formatAmount(portionAmount(l.original.portionAmount, parseDecimalInput(l.qtyText)!), unitOf(l.original))}
+                          {savedPortionGrams(l.original) !== l.original.portionAmount &&
+                            ` (oggi «${l.original.portionName}» = ${formatAmount(l.original.portionAmount, unitOf(l.original))})`}
                         </p>
                       )}
                       {product && product.id !== l.original.productId && (

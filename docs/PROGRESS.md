@@ -229,6 +229,9 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
   - Si sceglie un pasto e, per ogni voce, la si toglie, si cambia prodotto (in cima lo stesso gruppo, cioè le altre marche) o si cambia quantità.
   - Cambiando prodotto, la porzione decade e restano i grammi.
   - Salvataggio atomico.
+- Peso delle porzioni nel tempo: una voce salvata conserva i grammi di allora.
+  - Ridimensionare "1 vasetto" vale solo per le voci nuove e per i pasti ripetuti; l'anteprima di "Ripeti" mostra il peso attuale.
+  - Modificando una voce passata con la stessa porzione si usa il peso di allora (`savedPortionGrams`: 2 vasetti = 2 × il vecchio peso); un'altra porzione o un altro prodotto → peso attuale. Il form lo segnala.
 - API: `GET /api/diary/meals?meal&before&limit`, `POST /api/diary/batch` (massimo 50 voci, tutte valide o nessuna salvata). Nessuna migrazione.
 - e2e: tag casuali (prima un tag poteva essere prefisso di un altro → flaky) e intervalli di date: Diario 1946–1989, Analisi 1902–1934, Statistiche 2000–2019. Suite ×2: 104/104.
 

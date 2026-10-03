@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import type { DiaryEntry, Product } from "../../shared/api";
-import { MEAL_LABELS, MEALS, nutrientsFor, portionAmount, type Meal } from "../../shared/diary";
+import { MEAL_LABELS, MEALS, nutrientsFor, portionAmount, savedPortionGrams, type Meal } from "../../shared/diary";
 import { formatAmount, parseAmount } from "../../shared/quantity";
 import { diaryEntryInput, portionInput } from "../../shared/schemas";
 import { formatNumber, parseDecimalInput } from "../format";
@@ -42,14 +42,18 @@ export function DiaryEntryForm({ date, meal: initialMeal, entry, onDone }: Props
   }, [frequent.data, products.data]);
 
   const portion = portions.data?.find((p) => p.id === portionId) ?? null;
+  // Editing a saved entry with its own portion: the weight that portion had then (same rule as the server).
+  const keptGrams =
+    entry && portion && portion.id === entry.portionId && productId === entry.productId ? savedPortionGrams(entry) : null;
+  const portionGrams = keptGrams ?? portion?.amount ?? null;
   const qty = parseDecimalInput(qtyText);
   const amount =
     mode === "amount"
       ? product && amountText
         ? parseAmount(amountText, sizeUnit)
         : null
-      : portion && qty != null && qty > 0
-        ? portionAmount(portion.amount, qty)
+      : portionGrams != null && qty != null && qty > 0
+        ? portionAmount(portionGrams, qty)
         : null;
   const preview = product && amount ? nutrientsFor(product, amount) : null;
 
@@ -173,6 +177,12 @@ export function DiaryEntryForm({ date, meal: initialMeal, entry, onDone }: Props
                   <input className="input" inputMode="decimal" value={qtyText} onChange={(e) => setQtyText(e.target.value)} />
                 </Field>
               </div>
+              {keptGrams != null && portion && Math.round(keptGrams) !== portion.amount && (
+                <p className="muted small" data-testid="kept-portion">
+                  Per questa voce «{portion.name}» = {formatAmount(Math.round(keptGrams), sizeUnit)} (il peso di allora; oggi{" "}
+                  {formatAmount(portion.amount, sizeUnit)}).
+                </p>
+              )}
               {newPortion && (
                 <div className="card">
                   <div className="row">

@@ -1,7 +1,17 @@
 import { Hono } from "hono";
 import type { Created, DiaryDay, DiaryEntry, FrequentProduct, PastMeal, PastMealItem } from "../../shared/api";
 import { addDays, todayRome } from "../../shared/dates";
-import { costCents, groupRecentMeals, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
+import {
+  costCents,
+  groupRecentMeals,
+  nutrientsFor,
+  portionAmount,
+  savedPortionGrams,
+  sumKnown,
+  sumNutrients,
+  unitCost,
+  type Purchase,
+} from "../../shared/diary";
 import { diaryBatchInput, diaryDayQuery, diaryEntryInput, recentMealsQuery } from "../../shared/schemas";
 import type { AppEnv } from "../app";
 import { HttpError, notFound, parseBody, parseId, parseQuery } from "../http";
@@ -127,7 +137,8 @@ export const diaryRoutes = new Hono<AppEnv>()
     // A year back is plenty to find the usual meals; rows capped so a long history stays cheap.
     const { results } = await c.env.DB.prepare(
       `select e.date, e.product_id as productId, p.name as productName, p.brand as productBrand, p.unit,
-              p.group_id as groupId, e.amount, e.portion_id as portionId, po.name as portionName, e.portion_qty as portionQty
+              p.group_id as groupId, e.amount, e.portion_id as portionId, po.name as portionName, e.portion_qty as portionQty,
+              po.amount as portionAmount
          from diary_entries e
          join products p on p.id = e.product_id
          left join portions po on po.id = e.portion_id
@@ -173,7 +184,19 @@ export const diaryRoutes = new Hono<AppEnv>()
   })
   .patch("/:id", async (c) => {
     const id = parseId(c);
-    const e = await resolveEntry(c.env.DB, await parseBody(c, diaryEntryInput));
+    const input = await parseBody(c, diaryEntryInput);
+    const existing = await c.env.DB.prepare(
+      "select product_id as productId, amount, portion_id as portionId, portion_qty as portionQty from diary_entries where id = ?",
+    )
+      .bind(id)
+      .first<{ productId: number; amount: number; portionId: number | null; portionQty: number | null }>();
+    if (!existing) throw notFound("Voce del diario non trovata");
+    const e = await resolveEntry(c.env.DB, input);
+    // Same product and portion: the entry keeps the portion's weight at the time (the portion may have been
+    // resized since). Another portion or product: today's weight.
+    const samePortion = input.portionId != null && input.portionId === existing.portionId && input.productId === existing.productId;
+    const keptGrams = samePortion ? savedPortionGrams(existing) : null;
+    if (keptGrams != null) e.amount = portionAmount(keptGrams, input.portionQty!);
     const row = await c.env.DB.prepare(
       `update diary_entries set date = ?, meal = ?, product_id = ?, amount = ?, portion_id = ?, portion_qty = ?
         where id = ? returning id`,

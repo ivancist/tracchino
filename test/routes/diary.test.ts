@@ -97,6 +97,25 @@ describe("diary", () => {
     await add({ productId: banana, portionId: pid, portionQty: 1 });
     expect((await api.patch(`/api/portions/${pid}`, { name: "1 banana grande", amount: 150 })).status).toBe(200);
     expect((await day()).entries[0]).toMatchObject({ amount: 120, portionName: "1 banana grande" });
+    // Editing the past entry with the same portion keeps the weight it had (120 g), whatever the portion is today
+    const entryId = (await day()).entries[0]!.id;
+    const patch = (body: Record<string, unknown>) => api.patch(`/api/diary/${entryId}`, { date: DAY, meal: "cena", productId: banana, ...body });
+    expect((await patch({ portionId: pid, portionQty: 1 })).status).toBe(200);
+    expect((await day()).entries[0]).toMatchObject({ meal: "cena", amount: 120 });
+    expect((await patch({ portionId: pid, portionQty: 2 })).status).toBe(200);
+    expect((await day()).entries[0]).toMatchObject({ amount: 240, portionQty: 2 }); // 2 × 120, not 2 × 150
+    // Another portion → today's weight of that portion; back to the first one → its weight today
+    const half = (await api.post<{ id: number }>(`/api/products/${banana}/portions`, { name: "mezza banana", amount: 60 })).body.id;
+    await patch({ portionId: half, portionQty: 1 });
+    expect((await day()).entries[0]).toMatchObject({ amount: 60, portionId: half });
+    await patch({ portionId: pid, portionQty: 1 });
+    expect((await day()).entries[0]).toMatchObject({ amount: 150, portionId: pid });
+    // New entries and repeats use today's weight
+    await add({ productId: banana, portionId: pid, portionQty: 1, meal: "snack" });
+    expect((await day()).entries.find((e) => e.meal === "snack")).toMatchObject({ amount: 150 });
+    const past = (await api.get<PastMeal[]>(`/api/diary/meals?meal=snack&before=2026-10-02`)).body;
+    expect(past[0]!.items[0]).toMatchObject({ amount: 150, portionAmount: 150 });
+
     expect((await api.patch(`/api/portions/${pid}`, { name: "x", amount: 0 })).status).toBe(400);
     expect((await api.patch(`/api/portions/9999`, { name: "x", amount: 10 })).status).toBe(404);
   });

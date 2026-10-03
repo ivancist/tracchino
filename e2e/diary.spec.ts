@@ -8,8 +8,10 @@ const euro = (s: string) => new RegExp(`${s}\\s€`);
  * specs use (stats: 2000–2019, analysis: before 1935).
  */
 function uniqueDay(project: string, test: 0 | 1 | 2): string {
-  // ≤ 16000 days back from 1989-12-01: stays within 1946–1989
-  const offset = (Date.now() % 2000) * 8 + (project === "mobile" ? 1 : 0) + test * 2;
+  // 16-day block per run (≤ 1000 blocks: within 1946–1989), 8 days per project. Inside it each test owns the days
+  // it touches: test 1 also uses the next day, test 2 the two days before.
+  const slot = { 0: 2, 1: 1, 2: 3 }[test];
+  const offset = (Date.now() % 1000) * 16 + (project === "mobile" ? 8 : 0) + slot;
   return addDays("1989-12-01", -offset);
 }
 
@@ -261,10 +263,24 @@ test("diario: ripeti un pasto precedente cambiando marca e quantità; totali del
   await expect(breakfast.getByTestId("meal-nutrients")).toContainText("fibre ≥ 5 g");
   await expect(breakfast.getByTestId("meal-nutrients")).toContainText("sale ≥ 0,01 g");
 
+  // The jar is now 150 g: repeating uses today's weight, and says so
+  expect((await request.patch(`/api/portions/${vasetto}`, { data: { name: "1 vasetto", amount: 150 } })).status()).toBe(200);
+  await page.reload();
   // Dropping an item: repeat again with only the oats
   await page.getByRole("button", { name: "Ripeti un colazione precedente" }).click();
   await dialog.getByTestId("past-meal").first().click();
+  await expect(dialog.getByTestId("repeat-portion-grams")).toHaveText("= 150 g (oggi «1 vasetto» = 150 g)");
   await dialog.getByLabel(/Includi Yogurt/).uncheck();
   await dialog.getByRole("button", { name: "Aggiungi 1 voce a colazione" }).click();
   await expect(breakfast.getByTestId("diary-entry")).toHaveCount(3);
+
+  // A past breakfast keeps its 125 g jar, also when edited
+  await page.goto(`/diario?data=${addDays(day, -1)}`);
+  await page.getByTestId("meal-colazione").getByTestId("diary-entry").first().click();
+  const edit = page.getByRole("dialog", { name: "Modifica voce" });
+  await expect(edit.getByTestId("kept-portion")).toContainText("«1 vasetto» = 125 g (il peso di allora; oggi 150 g)");
+  await expect(edit.getByTestId("entry-preview")).toContainText("125 g");
+  await edit.getByLabel("Pasto").selectOption("snack");
+  await edit.getByRole("button", { name: "Salva", exact: true }).click();
+  await expect(page.getByTestId("meal-snack").getByTestId("diary-entry")).toContainText("1 × 1 vasetto (125 g)");
 });
