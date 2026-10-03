@@ -11,7 +11,7 @@ Ultimo aggiornamento: 2026-10-03 (Fase 4)
 | 1 Spesa manuale | ✅ completa (audit + review) | sì |
 | 2 Statistiche | ✅ completa (audit + review) | sì (`9e62c5d`) |
 | 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
-| 4 Nutrizione e barcode | 🟡 completa in locale, in verifica (branch `phase-4-nutrition`) | no |
+| 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
 | 5 Diario | da fare | — |
 | 6 Analisi e simulazioni | da fare | — |
 
@@ -134,9 +134,9 @@ Ultimo aggiornamento: 2026-10-03 (Fase 4)
 - Rischio "barcode non validi già salvati" verificato: in produzione non ci sono prodotti.
 - Bug trovato dall'e2e: chiudere un dialog annidato (scanner) chiudeva anche quello esterno (nuovo prodotto), perché l'evento `close` risale l'albero React. Ora `Dialog` reagisce solo alla propria chiusura.
 
-## Fase 4: da fare
-1. Merge, deploy (nessuna migrazione), smoke test.
-2. Prova reale dall'iPhone: zxing con la fotocamera vera, permesso fotocamera su `workers.dev`.
+### In produzione (2026-10-03)
+- Fast-forward di `main` a `7e4ab67`, deploy; smoke test senza login (`/`, `/api/me`, `/api/products`, `/api/off/…`, `/api/receipts/1/photo`) → 302.
+- Ancora aperto: prova reale dall'iPhone (zxing con la fotocamera vera, permesso fotocamera su `workers.dev`).
 
 
 ## Note operative
