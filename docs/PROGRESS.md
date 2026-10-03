@@ -13,7 +13,7 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
 | 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
 | 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
 | 5 Diario | ✅ completa (audit + review) | sì (`820286a`) |
-| 6 Analisi e simulazioni | 🟡 completa in locale, in verifica (branch `phase-6-analysis`) | no |
+| 6 Analisi e simulazioni | ✅ completa (audit + review) | sì (`334df0d`) |
 
 ## Fase 3: fatto (branch `phase-3-scan`)
 
@@ -202,8 +202,16 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
   - test: kcal 0, diario vuoto, `costMode=last`, fattore 10,01.
 - Scala `verify` verde: 378 test, 50 e2e.
 
-## Fase 6: da fare
-1. Merge, deploy (nessuna migrazione), smoke test.
+### In produzione (2026-10-03)
+- Fast-forward di `main` a `334df0d`, deploy; smoke test senza login (`/statistiche`, `/api/analysis`, `/api/analysis/simulate`) → 302.
+
+## Tutte le fasi del piano sono in produzione. Ancora aperto
+1. Prove reali dell'utente dal telefono:
+   - scansione di uno scontrino (revisione, salvataggio, foto nel dettaglio);
+   - barcode con la fotocamera dell'iPhone (fallback zxing).
+2. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
+3. Workers AI come riserva della scansione: rimandato (PLAN §5).
+4. Facoltativo: il bundle principale supera i 500 kB (warning di Vite); si può dividere per pagina con `lazy` nelle route.
 
 ## Note operative
 
