@@ -5,7 +5,7 @@ Ultimo aggiornamento: 2026-10-03 (consumo a pasto, giorno in corso)
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `3f087fe`** (versione Worker `cb9d0bfa`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- **Produzione = `main` = `04878a3`** (versione Worker `365683da`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
 - Migrazioni applicate in produzione: `0000`…`0008` (ultime: `0007_stock_adjustments`, `0008_piece_weight`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–7 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
@@ -334,6 +334,7 @@ Richieste dell'utente dopo la riorganizzazione.
 - "Dove vanno i soldi": "100 g a pasto · 1 confezione ogni N giorni · X al mese · € al mese", senza frequenza. La scheda prodotto mantiene la frequenza.
 - Liste: classe `.brand` (marca più piccola) in Prodotti, Statistiche, Diario; scorta su una riga (`.nowrap`, "pz").
 - Test: 486 Vitest (riso 3 pasti da 100 g: prima di cena 75 g/giorno su 4 giorni, a cena 80 su 5, giornata finita senza riso 60 su 5), 54 e2e. Mutazione (oggi sempre contato) rilevata.
+- In produzione dal 2026-10-03 (solo codice, nessuna migrazione): fast-forward di `main` a `04878a3`, deploy, smoke test → 302.
 - Da chiedere all'utente: la stessa regola del giorno in corso vale anche per le medie della Dieta (Statistiche → Dieta), che oggi contano il giorno in corso anche se incompleto.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
