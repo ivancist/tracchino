@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { LastPrice, MatchStatus, Product, ReceiptDetail, ScanResult } from "../../shared/api";
 import { formatIsoDate, todayRome } from "../../shared/dates";
 import { centsToInput, formatCents, parseEuroToCents } from "../../shared/money";
-import { perPieceCents, shouldPrefillPrice, totalPieces, unitPrices } from "../../shared/pricing";
+import { perPackageCents, perPieceCents, shouldPrefillPrice, totalPieces, unitPrices } from "../../shared/pricing";
 import { formatAmount, parseAmount, perKiloSuffix } from "../../shared/quantity";
 import { receiptInput, type ReceiptInput } from "../../shared/schemas";
 import { ProductForm } from "../components/ProductForm";
@@ -431,6 +431,9 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
                     {formatCents(prices.perKilo.cents)}
                     {perKiloSuffix(product.unit)}
                   </span>
+                )}
+                {prices && perPackageCents(prices.paidCents, p.packages) != null && (
+                  <span>{formatCents(perPackageCents(prices.paidCents, p.packages)!)}/conf.</span>
                 )}
                 {prices?.perPiece != null && <span>{formatCents(prices.perPiece)}/pz</span>}
                 {p.amount != null && product && <span>{formatAmount(p.amount, sizeUnit)}</span>}

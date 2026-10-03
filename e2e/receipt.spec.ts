@@ -58,6 +58,7 @@ test("scontrino con 3 righe: crea negozio e prodotti, salva, compare nell'elenco
   await page.getByLabel("Pezzi riga 2").fill("4");
   await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/1,78\s€\/kg/);
   await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/0,22\s€\/pz/); // 178 / 8 pieces = 22.25
+  await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/0,89\s€\/conf\./); // 178 / 2 packages
 
   // Line 3: milk, by volume
   await page.getByRole("button", { name: "+ Aggiungi prodotto" }).click();
@@ -66,6 +67,8 @@ test("scontrino con 3 righe: crea negozio e prodotti, salva, compare nell'elenco
     await d.getByLabel("Confezione").fill("1 l");
   });
   await page.getByLabel("Prezzo riga 3").fill("1,49");
+  await expect(page.getByTestId("receipt-line").nth(2)).toContainText(/1,49\s€\/l/);
+  await expect(page.getByTestId("receipt-line").nth(2)).not.toContainText("/conf."); // one package: nothing to add
 
   // 1,79 + 1,78 + 1,49 = 5,06
   await expect(page.getByTestId("receipt-total")).toHaveText(euro("5,06"));

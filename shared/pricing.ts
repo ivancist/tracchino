@@ -60,6 +60,11 @@ export function perPieceCents(paidCents: number, pieces: number | null): number 
   return Math.round(paidCents / pieces);
 }
 
+/** Price per package in cents, rounded; only when more than one package was bought (otherwise it is the line price). */
+export function perPackageCents(paidCents: number, packages: number | null): number | null {
+  return packages != null && packages > 1 ? Math.round(paidCents / packages) : null;
+}
+
 export type UnitPrices = {
   paidCents: number;
   perKilo: { cents: number; source: AmountSource } | null;

@@ -280,6 +280,7 @@ Correzione chiesta dall'utente dopo la versione precedente (sopra), che sommava 
 - Porzione "Confezione" automatica (`syncPackagePortion` in `worker/routes/products.ts`): alla creazione, o quando il peso della confezione cambia; segue il nuovo peso solo se coincideva col vecchio.
 - Test: 416 Vitest (nuovi `test/routes/package-portion.test.ts`, `totalPieces`, carote 1 × 500 g con 6 pezzi, uova 2 × 6 per negozio), 52 e2e (confezioni e pezzi nella revisione e nel salvato, uova 2 × 6, porzione "Confezione" nel diario). Mutazioni (peso × pezzi, unione che somma i pezzi) rilevate.
 - Eval reale ×2: 100% su prezzi, confezioni/pezzi, righe unite, prodotti, alias, totale.
+- Riga dello scontrino: con più di una confezione mostra anche il prezzo per confezione ("0,89 €/conf.", `perPackageCents`), richiesto dall'utente.
 - In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0005-final.sql`, migrazione applicata (40 righe a 1 confezione, pezzi invariati, 27 "Confezione", nessun doppione), fast-forward di `main` a `87bb24e`, deploy, smoke test → 302.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto

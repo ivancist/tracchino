@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { perKiloCents, perPieceCents, resolveAmount, shouldPrefillPrice, totalPieces, unitPrices } from "../../shared/pricing";
+import { perKiloCents, perPackageCents, perPieceCents, resolveAmount, shouldPrefillPrice, totalPieces, unitPrices } from "../../shared/pricing";
 
 const bananas = { unit: "g", packageAmount: null, avgPieceAmount: 120 } as const;
 const pasta = { unit: "g", packageAmount: 500, avgPieceAmount: null } as const;
@@ -73,6 +73,13 @@ describe("unit prices", () => {
     const r = unitPrices({ ...q(null, null), priceFullCents: 99, discountCents: 0 }, lettuce);
     expect(r.perKilo).toBeNull();
     expect(r.perPiece).toBeNull();
+  });
+
+  it("prices each package only when more than one was bought", () => {
+    expect(perPackageCents(170, 2)).toBe(85); // 2 jars of passata
+    expect(perPackageCents(100, 3)).toBe(33);
+    expect(perPackageCents(85, 1)).toBeNull(); // one package: the line price already says it
+    expect(perPackageCents(85, null)).toBeNull();
   });
 
   it("rounds half up to the cent", () => {
