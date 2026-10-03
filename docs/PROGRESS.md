@@ -5,7 +5,7 @@ Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confe
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `87bb24e`** (versione Worker `d8a5befc`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- **Produzione = `main` = `8cd5f23`** (versione Worker `518b3b85`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
 - Migrazioni applicate in produzione: `0000`…`0005` (ultime: `0004_salt`, `0005_packages`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–6 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
