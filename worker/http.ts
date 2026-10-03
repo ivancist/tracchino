@@ -91,3 +91,22 @@ function collectMessages(err: unknown): string {
   }
   return parts.join(" | ");
 }
+
+export const IMAGE_TYPES = { "image/jpeg": "jpg", "image/webp": "webp", "image/png": "png" } as const;
+export type ImageType = keyof typeof IMAGE_TYPES;
+/** Photos are compressed client-side to ~300 KB; this leaves room without accepting raw camera files. */
+export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+/** Reads an image body (raw bytes, not multipart). 415 for other types, 413 above MAX_IMAGE_BYTES. */
+export async function parseImage(c: Context): Promise<{ data: ArrayBuffer; mimeType: ImageType }> {
+  const mimeType = (c.req.header("Content-Type") ?? "").split(";")[0]!.trim().toLowerCase();
+  if (!(mimeType in IMAGE_TYPES)) {
+    throw new HttpError(415, { error: "invalid_input", message: "Formato immagine non supportato (JPEG, WebP o PNG)" });
+  }
+  const declared = Number(c.req.header("Content-Length") ?? "0");
+  if (declared > MAX_IMAGE_BYTES) throw new HttpError(413, { error: "invalid_input", message: "Immagine troppo grande" });
+  const data = await c.req.arrayBuffer();
+  if (data.byteLength > MAX_IMAGE_BYTES) throw new HttpError(413, { error: "invalid_input", message: "Immagine troppo grande" });
+  if (data.byteLength === 0) throw new HttpError(400, { error: "invalid_input", message: "Immagine vuota" });
+  return { data, mimeType: mimeType as ImageType };
+}

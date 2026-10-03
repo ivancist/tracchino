@@ -85,6 +85,7 @@ export type ReceiptItem = {
 
 export type ReceiptDetail = Omit<ReceiptSummary, "itemCount" | "totalCents"> & {
   notes: string | null;
+  hasPhoto: boolean;
   totalCents: number;
   items: ReceiptItem[];
 };
@@ -124,4 +125,37 @@ export type TopProduct = {
   purchases: number;
   days: number;
   avgIntervalDays: number | null;
+};
+
+export type MatchStatus = "alias" | "proposed" | "uncertain" | "none";
+
+export type ScanLine = {
+  rawText: string;
+  rawTextNorm: string;
+  priceCents: number;
+  discountCents: number;
+  pieces: number | null;
+  amount: number | null;
+  productId: number | null;
+  status: MatchStatus;
+  candidates: { productId: number; score: number }[];
+  suggestedName: string | null;
+};
+
+export type ScanResult = {
+  model: string;
+  /** False when the AI second pass failed or was skipped: matches come from text similarity only. */
+  aiMatching: boolean;
+  store: {
+    name: string | null;
+    address: string | null;
+    vatNumber: string | null;
+    storeId: number | null;
+    status: "vat" | "chain" | "none";
+  };
+  date: string | null;
+  totalCents: number | null;
+  lines: ScanLine[];
+  /** Scans left today under the safety cap. */
+  scansLeft: number;
 };

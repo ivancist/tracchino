@@ -6,12 +6,18 @@ import { groupRoutes } from "./routes/groups";
 import { meRoutes } from "./routes/me";
 import { productRoutes } from "./routes/products";
 import { receiptRoutes } from "./routes/receipts";
+import { createScanRoutes, type AiFactory } from "./routes/scan";
+import { createGemini } from "./services/ai/gemini";
 import { statsRoutes } from "./routes/stats";
 import { storeRoutes } from "./routes/stores";
 
 export type AppEnv = { Bindings: Env; Variables: AuthVariables };
 
-export function createApp(options: { keySet?: KeySetFactory } = {}) {
+/** Production AI: Gemini when its key is configured, otherwise scanning is disabled (503). */
+const geminiFromEnv: AiFactory = (env) =>
+  env.GEMINI_API_KEY ? createGemini({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }) : null;
+
+export function createApp(options: { keySet?: KeySetFactory; ai?: AiFactory } = {}) {
   const app = new Hono<AppEnv>().basePath("/api");
 
   // Must stay first: no cross-site writes, and every /api route is authenticated.
@@ -23,6 +29,7 @@ export function createApp(options: { keySet?: KeySetFactory } = {}) {
   app.route("/stores", storeRoutes);
   app.route("/groups", groupRoutes);
   app.route("/products", productRoutes);
+  app.route("/receipts/scan", createScanRoutes(options.ai ?? geminiFromEnv));
   app.route("/receipts", receiptRoutes);
   app.route("/stats", statsRoutes);
 

@@ -25,13 +25,18 @@ export function onSessionExpired(listener: () => void) {
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
+  // Images go as raw bytes with their own type; everything else as JSON.
+  const isBlob = body instanceof Blob;
   try {
     res = await fetch(path, {
       method,
       // Don't follow Access's cross-origin redirect to the Google login: detect it instead.
       redirect: "manual",
-      headers: { Accept: "application/json", ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined ? { "Content-Type": isBlob ? body.type : "application/json" } : {}),
+      },
+      body: body === undefined ? undefined : isBlob ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, "Connessione assente o server non raggiungibile");

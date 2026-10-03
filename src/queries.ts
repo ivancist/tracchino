@@ -5,6 +5,7 @@ import type {
   LastPrice,
   MeResponse,
   PriceStats,
+  ScanResult,
   SpendingStats,
   TopProduct,
   Product,
@@ -126,3 +127,18 @@ export const usePriceStats = (kind: "products" | "groups", id: number | null) =>
     queryFn: () => api.get<PriceStats>(`/api/stats/${kind}/${id}`),
     enabled: id != null,
   });
+
+export const scanReceipt = (photo: Blob) => api.post<ScanResult>("/api/receipts/scan", photo);
+export const uploadReceiptPhoto = (id: number, photo: Blob) => api.put<void>(`/api/receipts/${id}/photo`, photo);
+
+/**
+ * The scan result and its photo, handed from the receipts list to the review screen. Kept in memory on purpose:
+ * a reload drops it (the photo is only stored once the receipt is saved).
+ */
+let pendingScan: { result: ScanResult; photo: Blob } | null = null;
+export const setPendingScan = (scan: typeof pendingScan) => void (pendingScan = scan);
+export const takePendingScan = () => {
+  const scan = pendingScan;
+  pendingScan = null;
+  return scan;
+};

@@ -198,3 +198,10 @@ export const diaryEntries = sqliteTable(
     isoDateCheck("diary_entries_date_chk", t.date),
   ],
 );
+
+/** AI calls per day (Europe/Rome date): enforces a safety cap well below the provider's free tier. */
+export const aiUsage = sqliteTable("ai_usage", {
+  day: text("day").primaryKey(),
+  scans: integer("scans").notNull().default(0),
+  aiCalls: integer("ai_calls").notNull().default(0),
+});

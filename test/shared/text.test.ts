@@ -44,3 +44,12 @@ describe("rankByQuery", () => {
     expect(rank("")).toEqual(["Banane bio Coop", "Latte intero", "Pane integrale", "Banane Chiquita"]);
   });
 });
+
+describe("normalizeText splits letters from digits", () => {
+  it.each([
+    ["SPAGH N5", "spagh n 5"],
+    ["Spaghetti n.5", "spaghetti n 5"],
+    ["500g", "500 g"],
+    ["6X1.5L", "6 x 1 5 l"],
+  ])("%j → %j", (raw, norm) => expect(normalizeText(raw)).toBe(norm));
+});

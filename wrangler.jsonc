@@ -13,6 +13,18 @@
   "observability": { "enabled": true },
   // ACCESS_TEAM_DOMAIN, ACCESS_AUD, ALLOWED_EMAIL and GEMINI_API_KEY are secrets (public repo):
   // locally in .dev.vars, in production via `wrangler secret put` (see docs/SETUP.md)
+  "vars": {
+    // Receipt scan model (free tier); compare alternatives with the receipt-eval skill
+    "GEMINI_MODEL": "gemini-3.5-flash-lite"
+  },
+  // Private bucket for receipt photos: no public access, read only through /api/receipts/:id/photo
+  "r2_buckets": [
+    {
+      "binding": "RECEIPT_PHOTOS",
+      "bucket_name": "tracchino-receipts",
+      "jurisdiction": "eu"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

@@ -1,12 +1,16 @@
 // Text normalization and fuzzy search, shared by the product autocomplete (UI)
-// and, later, receipt-line matching (Worker).
+// and receipt-line matching (Worker).
 
-/** Lowercase, strip accents, punctuation → spaces, collapse whitespace. "Banane  Chiquità!" → "banane chiquita" */
+/**
+ * Lowercase, strip accents, punctuation → spaces, letters and digits split, collapse whitespace.
+ * "Banane  Chiquità!" → "banane chiquita", "SPAGH N5" and "Spaghetti n.5" → "... n 5", "500g" → "500 g".
+ */
 export function normalizeText(s: string): string {
   return s
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
+    .replace(/(?<=\p{L})(?=\p{N})|(?<=\p{N})(?=\p{L})/gu, " ")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }

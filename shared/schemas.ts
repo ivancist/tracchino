@@ -77,6 +77,8 @@ export const receiptInput = z.object({
   date: isoDate,
   totalPrintedCents: cents.nullish().transform((v) => v ?? null),
   notes: optionalText(500),
+  /** "scan": lines carry the printed text, which becomes a per-chain alias on save. */
+  source: z.enum(["manual", "scan"]).default("manual"),
   items: z.array(receiptItemInput).min(1, "Aggiungi almeno un prodotto").max(300),
 });
 export type ReceiptInput = z.input<typeof receiptInput>;
