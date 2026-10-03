@@ -75,6 +75,7 @@ diary_entries     id, date, meal ('colazione'|'pranzo'|'cena'|'snack'),
 Valori derivati, calcolati dalle query e non salvati:
 - **Confezioni e pezzi sono cose diverse** (decisione dell'utente, 2026-10-03): `packages` = confezioni comprate (2 passate, 2 scatolette di sgombro); `pieces` = pezzi **in ogni confezione** (uova 6P → 6; carote 500 g → 6) oppure pezzi sfusi (6 banane). Pezzi totali = `packages` × `pieces` (confezioni assenti = 1): 2 confezioni di uova da 6 = 12 uova.
 - **€/kg (o €/l)** = `price_paid / amount`. **€/pezzo** = `price_paid / pezzi totali`.
+- **Prodotti a pezzi** (banane, uova, zucchine): il "Peso medio a pezzo" del prodotto e la porzione "Pezzo" sono la stessa cosa (2026-10-03). Impostare il peso crea o aggiorna la porzione; creare o modificare una porzione "Pezzo" imposta il peso. Nello scontrino si scrivono i pezzi, nel diario si usa la porzione "Pezzo"; la scorta si mostra in pezzi ("≈ 3 pezzi (195 g)").
 - Quantità della riga (`shared/pricing.ts`, fissata dai test):
   - `amount` inserito → **misurata**;
   - `packages` × `package_amount` → **confezione**: è esatta, non stimata (2 × pasta 500 g = 1 kg). I pezzi dentro la confezione non cambiano il peso;
@@ -186,8 +187,9 @@ Richiesta dell'utente (2026-10-03): prevedere quando finisce un prodotto in base
 - Prodotti che non finiscono nel diario (detersivi, spezie): solo a mano (scelta dell'utente).
 - Unione di prodotti: le voci in lista passano al prodotto che resta; se c'erano entrambi, una sola voce con le confezioni sommate.
 - UI (riorganizzata il 2026-10-03 su richiesta dell'utente):
-  - barra in basso: **Diario** (apertura dell'app), **Spesa** (Lista | Scontrini), **Statistiche** (Spesa | Dieta | Consumi), **Altro** (Prodotti, Negozi; icona dell'account in alto a destra, solo qui, con email e stato del database);
-  - le scorte appartengono ai prodotti: nell'elenco "Restano …" o l'etichetta "Finito" (color sabbia tenue, non rosso); i consumi alle statistiche;
+  - barra in basso: **Diario** (apertura dell'app), **Spesa** (Lista | Scontrini, con due pulsanti fluttuanti quadrati in basso a destra: fotocamera sopra, "+" sotto), **Statistiche** (Spesa | Dieta), **Altro** (Prodotti, Negozi; icona dell'account in alto a destra, solo qui, con email e stato del database);
+  - le scorte appartengono ai prodotti: nell'elenco dei prodotti, al posto di kcal e acquisti, il prezzo dell'ultimo acquisto (a confezione, a pezzo o al kg) e quanto ne resta, anche per i prodotti comprati e non ancora mangiati (fagioli 2 × 240 g → 480 g); "Finito" è un'etichetta color sabbia tenue, non rossa;
+  - i consumi stanno in Statistiche → Spesa: il costo al mese ai consumi attuali tra i riquadri, e frequenza, consumo al giorno, confezioni e costo al mese dentro "Dove vanno i soldi" (la vista Consumi separata è stata tolta su richiesta dell'utente);
   - scheda prodotto: prima la confezione (peso o volume) e il prezzo a confezione dell'ultimo acquisto, con €/kg; poi scorta (con correzione) e consumi; poi prezzi nel tempo e negozi, porzioni, dati del prodotto;
   - nei Suggeriti della lista resta "Restano 200 g · finisce domani" (scelta dell'utente).
 - **Verifiche**: test della scorta e della previsione calcolati a mano sui dati reali (yogurt 1 kg − 4 × 200 g → 200 g, finisce domani; chia 90 g a 15 g/giorno → 6 giorni; avena 300 g a 50 g/giorno → 6 giorni; tonno 2 × 112 g mangiati → finito, 2 confezioni suggerite); scorta mai negativa; giorni senza diario esclusi; route della lista (400/401); scontrino salvato → voce scalata o rimossa, anche per un'altra marca dello stesso gruppo; e2e "suggerito → aggiunto → scontrino → sparisce".

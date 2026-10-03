@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (navigazione riorganizzata, correzione della scorta)
+Ultimo aggiornamento: 2026-10-03 (pezzi, scorte nell'elenco prodotti, pulsanti fluttuanti)
 
 ## Riprendere da qui
 
@@ -315,6 +315,17 @@ Richiesta dell'utente ("c'è tanto disordine"); dettagli e scelte in PLAN Fase 7
 - `security-auditor`: SECURE, due LOW: storico delle correzioni (ora si tiene solo l'ultima) e migrazione da applicare con l'ok dell'utente.
 - In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0007.sql`, migrazione applicata (tabella vuota, dati invariati), fast-forward di `main` a `e9ffca7`, deploy, smoke test (`/`, `/diario`, `/spesa`, `/spesa/scontrini`, `/altro`, `/api/pantry`, POST stock) → 302.
 - Prossimo passo chiesto dall'utente: rivedere la UI della sezione Diario.
+
+## Pezzi, scorte nell'elenco, consumi nelle statistiche (branch `fixes-pieces-ui`)
+
+Richieste dell'utente dopo la riorganizzazione.
+- Causa dei pezzi non contati: nessun prodotto aveva il "Peso medio a pezzo"; l'utente aveva messo il peso nella porzione "Pezzo" (banane 120, zucchine 150, uova 65, nettarine 145). Migrazione `0008_piece_weight` (solo dati): copia il peso dalla porzione "Pezzo" al prodotto e crea "Pezzo" dove c'è il peso. Provata su una copia dei dati di produzione: 4 prodotti aggiornati, 31 porzioni invariate.
+- `syncDefaultPortions` (Confezione e Pezzo) e `pieceWeightFromPortion` (una porzione "Pezzo" imposta il peso) in `worker/routes/products.ts`.
+- `/api/pantry` copre anche tutti i prodotti comprati (fagioli non ancora mangiati: 480 g); nuovi campi `avgPieceAmount`, `lastPurchase`.
+- `shared/pantry-text.ts`: `leftText` (pezzi per i prodotti a pezzi, grammi per i confezionati), `lastPriceText` (a confezione, a pezzo o al kg), `stockText`; test in `test/ui/pantry-text.test.ts`.
+- UI: elenco prodotti con prezzo e scorta; pulsanti fluttuanti negli scontrini (icona SVG della fotocamera); vista Consumi tolta, dati in Statistiche → Spesa; regola CSS per lo spazio tra campi, elenchi e pulsanti consecutivi; suggerimento del campo "Peso medio a pezzo".
+- Problemi dell'ambiente trovati: il dev server aveva il Worker fermo a una versione vecchia (un ricaricamento fallito durante i mutation test) → riavviato; lo screenshot a pagina intera dell'elenco prodotti falliva perché il D1 locale contiene migliaia di prodotti degli e2e; con "Tutto" le statistiche falliscono durante la suite perché altri spec scrivono scontrini dal 1902 (periodo troppo lungo) → lo spec usa "30 giorni".
+- Test: 484 Vitest, 54 e2e. Mutazione (porzione "Pezzo" che non imposta il peso) rilevata.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
