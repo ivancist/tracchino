@@ -5,8 +5,8 @@ Ultimo aggiornamento: 2026-10-03 (navigazione riorganizzata, correzione della sc
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `fa0e13f`** (versione Worker `8a240c02`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
-- Migrazioni applicate in produzione: `0000`…`0006` (ultime: `0005_packages`, `0006_shopping_list`). Backup pre-migrazione in `backups/` (gitignored).
+- **Produzione = `main` = `e9ffca7`** (versione Worker `44d4d3f9`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- Migrazioni applicate in produzione: `0000`…`0007` (ultime: `0006_shopping_list`, `0007_stock_adjustments`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–7 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
   - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
@@ -311,8 +311,10 @@ Richiesta dell'utente ("c'è tanto disordine"); dettagli e scelte in PLAN Fase 7
 - Testi di scorte e consumi in `src/pantryText.ts` (usati da lista, elenco, scheda prodotto e Consumi).
 - Correzione della scorta: migrazione `0007_stock_adjustments` (tabella nuova), `POST /api/pantry/:id/stock` (ne resta solo l'ultima), `estimateStock` riparte dalla correzione (stesso giorno: conta ciò che è registrato dopo, via `created_at`). `/api/pantry` copre anche i prodotti con una correzione; `rate` ora è un oggetto (con `eatenDays`) o `null`.
 - Errori miei corretti durante il lavoro: Prettier (non usato nel progetto) aveva riformattato `StatsPage.tsx`, ripristinato; D1 locale senza la 0007 → e2e falliti, migrazione locale applicata.
-- Test: 476 Vitest (correzioni: stesso giorno prima/dopo, senza acquisti, ultima vince, prodotto finito suggerito, 400/404, cascade), 54 e2e (navigazione e redirect, account solo in Altro, Spesa → Consumi → scheda prodotto → correzione → "Finito" nell'elenco). Mutazione sulla regola dello stesso giorno: rilevata.
+- Test: 475 Vitest (correzioni: stesso giorno prima/dopo, senza acquisti, ultima vince, prodotto finito suggerito, 400/404, cascade), 54 e2e (navigazione e redirect, account solo in Altro, Spesa → Consumi → scheda prodotto → correzione → "Finito" nell'elenco). Mutazione sulla regola dello stesso giorno: rilevata.
 - `security-auditor`: SECURE, due LOW: storico delle correzioni (ora si tiene solo l'ultima) e migrazione da applicare con l'ok dell'utente.
+- In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0007.sql`, migrazione applicata (tabella vuota, dati invariati), fast-forward di `main` a `e9ffca7`, deploy, smoke test (`/`, `/diario`, `/spesa`, `/spesa/scontrini`, `/altro`, `/api/pantry`, POST stock) → 302.
+- Prossimo passo chiesto dall'utente: rivedere la UI della sezione Diario.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
