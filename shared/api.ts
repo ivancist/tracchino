@@ -253,13 +253,16 @@ export type ShoppingListItem = {
   packages: number | null;
 };
 
-/** GET /api/pantry: a product eaten in the last 30 days or with a stock correction — stock, forecast, suggestion, monthly use. */
+/** GET /api/pantry: a product bought, eaten in the last 30 days or with a stock correction — stock, forecast, suggestion, monthly use. */
 export type PantryItem = {
   productId: number;
   name: string;
   brand: string | null;
   unit: ProductUnit;
   packageAmount: number | null;
+  avgPieceAmount: number | null;
+  /** Latest receipt line (raw: paid cents, packages, pieces, grams) — price per package or per kg at a glance. */
+  lastPurchase: { date: string; paidCents: number; packages: number | null; pieces: number | null; amount: number | null } | null;
   /**
    * Consumption over the last 30 days: g/ml per logged day, on a typical day it is eaten, logged days since first eaten
    * (under MIN_RATE_DAYS: no forecast nor monthly use) and days eaten. null when not eaten lately (stock corrected only).

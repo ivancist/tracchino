@@ -1,30 +1,11 @@
-// Pantry wording shared by the shopping list, products, the product page and the consumption stats.
+// Pantry wording shared by the shopping list, products, the product page and the statistics.
 import type { PantryItem } from "../shared/api";
-import { daysBetween, formatShortDate, todayRome } from "../shared/dates";
 import { formatCents } from "../shared/money";
 import { MIN_RATE_DAYS } from "../shared/pantry";
-import { formatAmount } from "../shared/quantity";
+import { grams } from "../shared/pantry-text";
 import { formatNumber } from "./format";
 
-export const productTitle = (p: { name: string; brand: string | null }) => (p.brand ? `${p.name} (${p.brand})` : p.name);
-export const grams = (g: number, unit: PantryItem["unit"] | null) => formatAmount(Math.round(g), unit ?? "g");
-
-/** "domani (4 ott)", "tra 6 giorni (9 ott)" */
-export function whenText(date: string): string {
-  const d = daysBetween(todayRome(), date);
-  const rel = d <= 0 ? "oggi" : d === 1 ? "domani" : `tra ${d} giorni`;
-  return `${rel} (${formatShortDate(date)})`;
-}
-
-export const isFinished = (item: PantryItem) => item.stock != null && item.stock.amount <= 0;
-
-/** "Restano ≈ 200 g · finisce domani (4 ott)"; "Finito"; unknown stock explained. */
-export function stockText(item: PantryItem): string {
-  if (!item.stock) return "Scorta sconosciuta: non risulta comprato nell'app (o la quantità comprata non è nota)";
-  if (item.stock.amount <= 0) return "Finito";
-  const left = `Restano ${item.stock.estimated ? "≈ " : ""}${grams(item.stock.amount, item.unit)}`;
-  return item.forecast ? `${left} · finisce ${whenText(item.forecast.runOutDate)}` : left;
-}
+export { grams, isFinished, lastPriceText, leftText, productTitle, stockText, whenText } from "../shared/pantry-text";
 
 /** "Mangiato in 4 giorni su 4 registrati" (last 30 days, since first eaten). */
 export function frequencyText(item: PantryItem): string | null {

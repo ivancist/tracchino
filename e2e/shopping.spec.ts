@@ -60,17 +60,19 @@ test("spesa: suggerito → aggiunto → scontrino → esce; consumi in statistic
     }
     await page.screenshot({ path: info.outputPath("shopping-list.png"), fullPage: true });
 
-    // Consumption, with frequency: in the statistics
-    await page.goto("/statistiche?vista=consumi");
-    const used = page.getByTestId("consumption-item").filter({ hasText: `Yogurt ${tag}` });
-    await expect(used).toContainText("Mangiato in 4 giorni su 4 registrati");
-    await expect(used).toContainText("200 g al giorno · 1 confezione ogni 5 giorni · 6 al mese");
-    await expect(used).toContainText(/26,40\s€ al mese/);
-    await expect(page.getByTestId("consumption-item").filter({ hasText: `Tonno ${tag}` })).toContainText("Diario di 1 giorno"); // one meal
-    await page.screenshot({ path: info.outputPath("consumption.png"), fullPage: true });
+    // Consumption, with frequency: in Statistiche → Spesa, "Dove vanno i soldi"; monthly cost among the tiles
+    await page.goto("/statistiche");
+    await expect(page.getByRole("tab")).toHaveText(["Spesa", "Dieta"]);
+    // Other specs write receipts in 1902–2019: "Tutto" would be too long a period while they run
+    await page.getByRole("button", { name: "30 giorni" }).click();
+    await expect(page.getByTestId("stats-tiles")).toContainText("Al mese, ai consumi attuali");
+    const top = page.getByTestId("top-products").getByRole("link").filter({ hasText: `Yogurt ${tag}` });
+    await expect(top.getByTestId("top-consumption")).toContainText("Mangiato in 4 giorni su 4 registrati · 200 g al giorno · 1 confezione ogni 5 giorni · 6 al mese");
+    await expect(top.getByTestId("top-consumption")).toContainText(/26,40\s€ al mese/);
+    await page.screenshot({ path: info.outputPath("stats.png"), fullPage: true });
 
     // Product page: package and its price first, then stock and consumption
-    await used.getByRole("link").click();
+    await top.click();
     await expect(page.getByTestId("package-summary")).toContainText("Confezione da 1 kg");
     await expect(page.getByTestId("package-price")).toHaveText(/^4,40\s€ a confezione$/);
     await expect(page.getByTestId("package-summary")).toContainText(/4,40\s€\/kg/);
@@ -86,9 +88,24 @@ test("spesa: suggerito → aggiunto → scontrino → esce; consumi in statistic
     await expect(stock.getByTestId("stock-text")).toContainText("Finito");
     await page.screenshot({ path: info.outputPath("product.png"), fullPage: true });
 
-    // Products list: finished is flagged
+    // Products list: price per package instead of kcal, stock left instead of purchases; finished is flagged
     await page.goto("/prodotti");
-    await expect(page.getByTestId("product-row").filter({ hasText: `Yogurt ${tag}` }).locator(".badge.finished")).toHaveText("Finito");
+    const row = page.getByTestId("product-row").filter({ hasText: `Yogurt ${tag}` });
+    await expect(row).toContainText(/confezione da 1 kg · 4,40\s€ a conf\./);
+    await expect(row.getByTestId("product-stock").locator(".badge.finished")).toHaveText("Finito");
+    await expect(row).not.toContainText("1×");
+    await page.screenshot({ path: info.outputPath("products.png") }); // not full page: the local catalog holds every e2e run's products
+
+    // Receipts: floating buttons, scan above new
+    await page.goto("/spesa/scontrini");
+    const fabs = page.locator(".fab-stack .fab");
+    await expect(fabs).toHaveCount(2);
+    const [scanBox, newBox] = [await fabs.nth(0).boundingBox(), await fabs.nth(1).boundingBox()];
+    expect(scanBox!.y).toBeLessThan(newBox!.y);
+    expect(Math.round(newBox!.width)).toBe(Math.round(newBox!.height)); // 1:1
+    await page.screenshot({ path: info.outputPath("receipts.png") });
+    await page.getByRole("link", { name: "Nuovo scontrino" }).click();
+    await expect(page).toHaveURL(/\/scontrini\/nuovo$/);
 
     // Next receipt: 1 package bought → 1 left on the list; another one → gone. Free text stays.
     created.receipts.push(await post("/api/receipts", { storeId, date: today, items: [{ productId: yogurt, priceFullCents: 440, packages: 1 }] }));

@@ -39,6 +39,15 @@ function useScan() {
   return { busy, error, onFile };
 }
 
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </svg>
+  );
+}
+
 export function ReceiptsPage() {
   const receipts = useReceipts();
   const all = receipts.data?.pages.flat();
@@ -46,29 +55,28 @@ export function ReceiptsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Spesa"
-        action={
-          <div className="actions">
-            <label className={scan.busy ? "button disabled" : "button"}>
-              {scan.busy ? "Lettura…" : "📷 Scansiona"}
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="visually-hidden"
-                disabled={scan.busy}
-                aria-label="Foto dello scontrino"
-                onChange={scan.onFile}
-              />
-            </label>
-            <Link to="/scontrini/nuovo" className="button primary">
-              + Nuovo
-            </Link>
-          </div>
-        }
-      />
+      <PageHeader title="Spesa" />
       <ShoppingTabs />
+      {/* Floating, bottom right: scan above, new receipt below (closest to the thumb). */}
+      <div className="fab-stack">
+        <label className={scan.busy ? "fab disabled" : "fab"} title="Scansiona uno scontrino">
+          <CameraIcon />
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="visually-hidden"
+            disabled={scan.busy}
+            aria-label="Foto dello scontrino"
+            onChange={scan.onFile}
+          />
+        </label>
+        <Link to="/scontrini/nuovo" className="fab primary" aria-label="Nuovo scontrino" title="Nuovo scontrino">
+          <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </Link>
+      </div>
       {scan.busy && <p className="muted" role="status">Sto leggendo lo scontrino, può richiedere una ventina di secondi…</p>}
       <ErrorText error={scan.error} />
       <QueryState isLoading={receipts.isLoading} error={receipts.error} />

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { formatIsoDate } from "../../shared/dates";
 import { formatAmount } from "../../shared/quantity";
 import { rankByQuery } from "../../shared/text";
 import { BarcodeScanner } from "../components/BarcodeScanner";
@@ -10,7 +9,7 @@ import { productLabel } from "../components/ProductPicker";
 import { ApiError, errorMessage } from "../api";
 import { ErrorText, PageHeader, QueryState } from "../components/ui";
 import { storedCost } from "../costPreference";
-import { isFinished, stockText } from "../pantryText";
+import { isFinished, lastPriceText, leftText } from "../pantryText";
 import { lookupBarcode, usePantry, useProducts } from "../queries";
 
 export function ProductsPage() {
@@ -89,32 +88,23 @@ export function ProductsPage() {
               <Link to={`/prodotti/${p.id}`} className="list-item" data-testid="product-row">
                 <span>
                   <strong>{p.name}</strong> {p.brand && <span className="muted">{p.brand}</span>}
-                  {stock && isFinished(stock) && <span className="badge finished">Finito</span>}
                   <br />
                   <span className="muted small">
                     {[
                       p.groupName,
-                      p.packageAmount ? formatAmount(p.packageAmount, p.unit === "ml" ? "ml" : "g") : null,
-                      p.kcal100 != null ? `${p.kcal100} kcal` : null,
+                      p.packageAmount ? `confezione da ${formatAmount(p.packageAmount, p.unit)}` : null,
+                      stock ? lastPriceText(stock) : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
-                  {stock?.stock && !isFinished(stock) && (
-                    <>
-                      <br />
-                      <span className="small">{stockText(stock)}</span>
-                    </>
-                  )}
                 </span>
-                <span className="muted small right">
-                  {p.purchaseCount > 0 ? `${p.purchaseCount}×` : "mai comprato"}
-                  {p.lastPurchaseDate && (
-                    <>
-                      <br />
-                      {formatIsoDate(p.lastPurchaseDate)}
-                    </>
-                  )}
+                <span className="right" data-testid="product-stock">
+                  {stock && isFinished(stock) ? (
+                    <span className="badge finished first">Finito</span>
+                  ) : stock?.stock ? (
+                    <span className="small">{leftText(stock)}</span>
+                  ) : null}
                 </span>
               </Link>
             </li>

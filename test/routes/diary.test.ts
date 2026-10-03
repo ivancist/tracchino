@@ -74,7 +74,9 @@ describe("diary", () => {
     const created = await api.post<{ id: number }>(`/api/products/${banana}/portions`, { name: "1 banana", amount: 120 });
     expect(created.status).toBe(201);
     const portions = (await api.get<Portion[]>(`/api/products/${banana}/portions`)).body;
-    expect(portions).toEqual([{ id: created.body.id, productId: banana, name: "1 banana", amount: 120 }]);
+    // "Pezzo" comes with the average piece weight (120 g); "1 banana" is the one just added
+    expect(portions.map((p) => [p.name, p.amount])).toEqual([["1 banana", 120], ["Pezzo", 120]]);
+    expect(portions.find((p) => p.name === "1 banana")).toEqual({ id: created.body.id, productId: banana, name: "1 banana", amount: 120 });
 
     expect((await add({ productId: banana, portionId: created.body.id, portionQty: 1.5 })).status).toBe(201);
     const [e] = (await day()).entries;
@@ -136,7 +138,7 @@ describe("diary", () => {
     expect((await api.post(`/api/products/${dup}/merge`, { intoId: banana })).status).toBe(200);
     const [e] = (await day()).entries;
     expect(e).toMatchObject({ productId: banana, amount: 240, portionId: pid });
-    expect((await api.get<Portion[]>(`/api/products/${banana}/portions`)).body.map((p) => p.id)).toEqual([pid]);
+    expect((await api.get<Portion[]>(`/api/products/${banana}/portions`)).body.map((p) => p.id)).toContain(pid);
   });
 
   it("edits and deletes entries", async () => {

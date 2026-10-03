@@ -217,6 +217,23 @@ describe("/api/pantry", () => {
     expect((await api.get<PantryItem[]>("/api/pantry")).body).toEqual([]);
   });
 
+  it("bought but not eaten yet: still in the pantry with its stock (beans: 2 × 240 g → 480 g) and last price", async () => {
+    const beans = await api.product({ name: "Fagioli", unit: "g", packageAmount: 240 });
+    await api.receipt({ storeId, date: day(-5), items: [{ productId: beans, priceFullCents: 118, packages: 2 }] });
+    const b = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === beans)!;
+    expect(b).toMatchObject({ rate: null, stock: { amount: 480, estimated: false }, forecast: null, inList: false });
+    expect(b.lastPurchase).toEqual({ date: day(-5), paidCents: 118, packages: 2, pieces: null, amount: null });
+  });
+
+  it("by the piece: 4 bananas × 120 g bought, 2 eaten → 240 g (the weight comes from the 'Pezzo' portion)", async () => {
+    const bananas = await api.product({ name: "Banane", unit: "g" });
+    await api.post(`/api/products/${bananas}/portions`, { name: "Pezzo", amount: 120 });
+    await api.receipt({ storeId, date: day(-2), items: [{ productId: bananas, priceFullCents: 47, pieces: 4 }] });
+    await api.post("/api/diary", { date: day(-1), meal: "snack", productId: bananas, amount: 240 });
+    const b = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === bananas)!;
+    expect(b).toMatchObject({ avgPieceAmount: 120, stock: { amount: 240, estimated: true } });
+  });
+
   it("ignores products not eaten in the last 30 days", async () => {
     await api.post("/api/diary", { date: day(-30), meal: "colazione", productId: yogurtA, amount: 200 });
     expect((await api.get<PantryItem[]>("/api/pantry")).body).toEqual([]);

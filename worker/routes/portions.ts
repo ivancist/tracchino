@@ -3,6 +3,7 @@ import type { Created, Portion } from "../../shared/api";
 import { portionInput } from "../../shared/schemas";
 import type { AppEnv } from "../app";
 import { notFound, parseBody, parseId } from "../http";
+import { pieceWeightFromPortion } from "./products";
 
 /** /api/products/:id/portions — a product's saved servings. */
 export const productPortionRoutes = new Hono<AppEnv>()
@@ -22,6 +23,7 @@ export const productPortionRoutes = new Hono<AppEnv>()
     const row = await c.env.DB.prepare("insert into portions (product_id, name, amount) values (?, ?, ?) returning id")
       .bind(productId, input.name, input.amount)
       .first<{ id: number }>();
+    await pieceWeightFromPortion(c.env.DB, productId, input);
     return c.json<Created>({ id: row!.id }, 201);
   });
 
@@ -30,10 +32,11 @@ export const portionRoutes = new Hono<AppEnv>()
   .patch("/:id", async (c) => {
     const id = parseId(c);
     const input = await parseBody(c, portionInput);
-    const row = await c.env.DB.prepare("update portions set name = ?, amount = ? where id = ? returning id")
+    const row = await c.env.DB.prepare("update portions set name = ?, amount = ? where id = ? returning product_id as productId")
       .bind(input.name, input.amount, id)
-      .first();
+      .first<{ productId: number }>();
     if (!row) throw notFound("Porzione non trovata");
+    await pieceWeightFromPortion(c.env.DB, row.productId, input);
     return c.json<Created>({ id });
   })
   .delete("/:id", async (c) => {

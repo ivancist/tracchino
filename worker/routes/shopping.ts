@@ -102,10 +102,12 @@ export const shoppingListRoutes = new Hono<AppEnv>()
 
 type ProductRow = ProductQuantityInfo & { id: number; name: string; brand: string | null; unit: ProductUnit };
 
-/** Products the pantry covers: eaten in the window, or with a stock correction. */
-const SCOPE = "(select product_id from diary_entries where date between ?1 and ?2 union select product_id from stock_adjustments)";
+/** Products the pantry covers: bought in the app, eaten in the window, or with a stock correction. */
+const SCOPE = `(select product_id from diary_entries where date between ?1 and ?2
+                union select product_id from stock_adjustments
+                union select product_id from receipt_items)`;
 
-/** /api/pantry — stock, forecast and monthly use of every product eaten in the last 30 days or with a stock correction. */
+/** /api/pantry — stock, forecast and monthly use of every product bought, eaten in the last 30 days or with a stock correction. */
 export const pantryRoutes = new Hono<AppEnv>()
   .get("/", async (c) => {
     const { costMode, windowDays } = parseQuery(c, pantryQuery);
@@ -125,7 +127,8 @@ export const pantryRoutes = new Hono<AppEnv>()
         .prepare(
           `select ri.product_id as productId, r.date, r.created_at as createdAt, ri.price_paid_cents as paidCents, ri.packages, ri.pieces, ri.amount
              from receipt_items ri join receipts r on r.id = ri.receipt_id
-            where ri.product_id in ${SCOPE}`,
+            where ri.product_id in ${SCOPE}
+            order by r.date, r.id, ri.id`,
         )
         .bind(from, today),
       d1.prepare(
@@ -162,6 +165,8 @@ export const pantryRoutes = new Hono<AppEnv>()
         brand: p.brand,
         unit: p.unit,
         packageAmount: p.packageAmount,
+        avgPieceAmount: p.avgPieceAmount,
+        lastPurchase: bought.length ? (({ date, paidCents, packages, pieces, amount }) => ({ date, paidCents, packages, pieces, amount }))(bought.at(-1)!) : null,
         rate,
         stock,
         // No stock left is "finished" even without a usable rate (tuna bought and eaten the same day, or marked finished).

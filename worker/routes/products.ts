@@ -41,28 +41,52 @@ function toRow(input: ParsedProduct, previous?: Pick<typeof products.$inferSelec
   return { ...values, nutritionSource };
 }
 
-const PACKAGE_PORTION = "Confezione";
+/** Default portions kept in step with the product: the package, and a piece (same name match as migration 0008). */
+const DEFAULT_PORTIONS = {
+  package: { name: "Confezione", aliases: ["confezione"] },
+  piece: { name: "Pezzo", aliases: ["pezzo", "1 pezzo"] },
+} as const;
 
 /**
- * Default "Confezione" portion of a packaged product (g/ml): created when the package size is set or changes and the
- * product has none (a name match, case-insensitive). An existing one follows the new size only if it matched the old
- * size: one resized by hand is left alone. Diary entries keep their grams either way.
+ * Default portion ("Confezione" from the package size, "Pezzo" from the average piece weight): created when the size is
+ * set or changes and the product has none (name match, case-insensitive). An existing one follows the new size only if
+ * it matched the old size: one resized by hand is left alone. Diary entries keep their grams either way.
  */
-async function syncPackagePortion(
+async function syncDefaultPortion(
   d1: D1Database,
-  product: { id: number; unit: string; packageAmount: number | null },
-  previousPackageAmount: number | null | undefined,
+  productId: number,
+  kind: keyof typeof DEFAULT_PORTIONS,
+  amount: number | null,
+  previous: number | null | undefined,
 ) {
-  if (product.packageAmount == null || product.unit === "pz" || product.packageAmount === previousPackageAmount) return;
-  const isPackage = "product_id = ?1 and lower(trim(name)) = lower(?2)";
+  if (amount == null || amount === previous) return;
+  const { name, aliases } = DEFAULT_PORTIONS[kind];
+  const same = "product_id = ?1 and lower(trim(name)) in (select value from json_each(?2))";
+  const names = JSON.stringify(aliases);
   await d1.batch([
-    ...(previousPackageAmount != null
-      ? [d1.prepare(`update portions set amount = ?3 where ${isPackage} and amount = ?4`).bind(product.id, PACKAGE_PORTION, product.packageAmount, previousPackageAmount)]
+    ...(previous != null
+      ? [d1.prepare(`update portions set amount = ?3 where ${same} and amount = ?4`).bind(productId, names, amount, previous)]
       : []),
     d1
-      .prepare(`insert into portions (product_id, name, amount) select ?1, ?2, ?3 where not exists (select 1 from portions where ${isPackage})`)
-      .bind(product.id, PACKAGE_PORTION, product.packageAmount),
+      .prepare(`insert into portions (product_id, name, amount) select ?1, ?3, ?4 where not exists (select 1 from portions where ${same})`)
+      .bind(productId, names, name, amount),
   ]);
+}
+
+/** Portions follow the product: "Confezione" (g/ml products only: a "pz" package size is not a weight) and "Pezzo". */
+async function syncDefaultPortions(
+  d1: D1Database,
+  product: { id: number; unit: string; packageAmount: number | null; avgPieceAmount: number | null },
+  previous?: { packageAmount: number | null; avgPieceAmount: number | null },
+) {
+  if (product.unit !== "pz") await syncDefaultPortion(d1, product.id, "package", product.packageAmount, previous?.packageAmount);
+  await syncDefaultPortion(d1, product.id, "piece", product.avgPieceAmount, previous?.avgPieceAmount);
+}
+
+/** A portion named "Pezzo" defines the average piece weight (the owner may set it there rather than on the product). */
+export async function pieceWeightFromPortion(d1: D1Database, productId: number, portion: { name: string; amount: number }) {
+  if (!(DEFAULT_PORTIONS.piece.aliases as readonly string[]).includes(portion.name.trim().toLowerCase())) return;
+  await d1.prepare("update products set avg_piece_amount = ? where id = ?").bind(portion.amount, productId).run();
 }
 
 async function loadProduct(env: Env, id: number): Promise<Product | null> {
@@ -82,7 +106,7 @@ export const productRoutes = new Hono<AppEnv>()
   .post("/", async (c) => {
     const input = await parseBody(c, productInput);
     const [row] = await getDb(c.env).insert(products).values(toRow(input)).returning({ id: products.id });
-    await syncPackagePortion(c.env.DB, { id: row!.id, unit: input.unit, packageAmount: input.packageAmount }, undefined);
+    await syncDefaultPortions(c.env.DB, { id: row!.id, unit: input.unit, packageAmount: input.packageAmount, avgPieceAmount: input.avgPieceAmount });
     return c.json<Created>({ id: row!.id }, 201);
   })
   .patch("/:id", async (c) => {
@@ -92,7 +116,7 @@ export const productRoutes = new Hono<AppEnv>()
     const previous = await db.select().from(products).where(eq(products.id, id)).get();
     if (!previous) throw notFound("Prodotto non trovato");
     await db.update(products).set(toRow(input, previous)).where(eq(products.id, id));
-    await syncPackagePortion(c.env.DB, { id, unit: input.unit, packageAmount: input.packageAmount }, previous.packageAmount);
+    await syncDefaultPortions(c.env.DB, { id, unit: input.unit, packageAmount: input.packageAmount, avgPieceAmount: input.avgPieceAmount }, previous);
     return c.json<Created>({ id });
   })
   .delete("/:id", async (c) => {

@@ -313,6 +313,14 @@ label.button:focus-within {
   flex: 1 1 10rem;
 }
 
+/* Consecutive controls (an input or a list, then a button or another input) never touch. Flex containers with their own gap
+   (.form, .row, .actions…) already space their children and are left alone. */
+:not(.form, .row, .actions, .segmented, .grid-2, .grid-3, .grid-4, .shopping-row, .line, .line-head)
+  > :is(.input, .field, .row, .combobox, form, .actions, .button, .list)
+  + :is(.input, .field, .row, .combobox, form, .actions, .button) {
+  margin-top: 0.75rem;
+}
+
 .grid-2,
 .grid-3,
 .grid-4 {
@@ -411,6 +419,48 @@ label.button:focus-within {
   color: var(--muted);
   margin: 0 0 0.4rem;
   font-weight: 600;
+}
+
+/* ---------- floating buttons (receipts) ---------- */
+.fab-stack {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(var(--tabbar-h) + 1rem + env(safe-area-inset-bottom));
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fab {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  aspect-ratio: 1;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.fab.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.fab.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.fab:focus-within,
+.fab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ---------- product page ---------- */
@@ -1008,6 +1058,11 @@ ul.notice {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.rank-row .rank-detail {
+  display: block;
+  margin-top: 0.15rem;
 }
 
 .badge.first {

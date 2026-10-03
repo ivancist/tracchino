@@ -3,10 +3,11 @@ import { Link, useSearchParams } from "react-router";
 import { addDays, formatIsoDate, formatShortDate, todayRome, weekStart } from "../../shared/dates";
 import { formatCents } from "../../shared/money";
 import { BarChart } from "../components/charts";
-import { ConsumptionStats } from "../components/ConsumptionStats";
 import { DietAnalysis } from "../components/DietAnalysis";
 import { Field, PageHeader, QueryState } from "../components/ui";
-import { useSpending, useTopProducts } from "../queries";
+import { storedCost } from "../costPreference";
+import { consumptionText, frequencyText } from "../pantryText";
+import { usePantry, useSpending, useTopProducts } from "../queries";
 
 type Preset = "all" | "30d" | "12w" | "year" | "custom";
 
@@ -49,8 +50,7 @@ const money = (cents: number | null) => (cents == null ? "—" : formatCents(cen
 export function StatsPage() {
   const today = todayRome();
   const [params, setParams] = useSearchParams();
-  const vista = params.get("vista");
-  const view = vista === "dieta" || vista === "consumi" ? vista : "spesa";
+  const view = params.get("vista") === "dieta" ? "dieta" : "spesa";
   const [preset, setPreset] = useState<Preset>("all");
   const [custom, setCustom] = useState({ from: addDays(today, -29), to: today });
   const range = preset === "custom" ? custom : presetRange(preset, today);
@@ -59,6 +59,14 @@ export function StatsPage() {
   const s = spending.data;
 
   const maxTop = Math.max(1, ...(top.data ?? []).map((t) => t.totalCents));
+
+  // Consumption from the diary (last 30 days): monthly cost at the current pace, and per product in "Dove vanno i soldi".
+  const [cost] = useState(storedCost);
+  const pantry = usePantry(cost.mode, cost.windowDays);
+  const eaten = (pantry.data ?? []).filter((i) => i.rate != null);
+  const eatenById = new Map(eaten.map((i) => [i.productId, i]));
+  const known = eaten.filter((i) => i.costPerMonthCents != null);
+  const monthly = known.length ? { cents: known.reduce((sum, i) => sum + i.costPerMonthCents!, 0), missing: eaten.length - known.length } : null;
 
   return (
     <>
@@ -70,35 +78,26 @@ export function StatsPage() {
         <button type="button" role="tab" aria-selected={view === "dieta"} onClick={() => setParams({ vista: "dieta" })}>
           Dieta
         </button>
-        <button type="button" role="tab" aria-selected={view === "consumi"} onClick={() => setParams({ vista: "consumi" })}>
-          Consumi
-        </button>
       </div>
-      {view !== "consumi" && (
-        <>
-          <div className="chips" role="group" aria-label="Periodo">
-            {PRESETS.map((p) => (
-              <button key={p.id} type="button" className="chip" aria-pressed={preset === p.id} onClick={() => setPreset(p.id)}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {preset === "custom" && (
-            <div className="row">
-              <Field label="Dal">
-                <input className="input" type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} />
-              </Field>
-              <Field label="Al">
-                <input className="input" type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} />
-              </Field>
-            </div>
-          )}
-        </>
+      <div className="chips" role="group" aria-label="Periodo">
+        {PRESETS.map((p) => (
+          <button key={p.id} type="button" className="chip" aria-pressed={preset === p.id} onClick={() => setPreset(p.id)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {preset === "custom" && (
+        <div className="row">
+          <Field label="Dal">
+            <input className="input" type="date" value={custom.from} max={custom.to} onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))} />
+          </Field>
+          <Field label="Al">
+            <input className="input" type="date" value={custom.to} min={custom.from} onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))} />
+          </Field>
+        </div>
       )}
 
-      {view === "consumi" ? (
-        <ConsumptionStats />
-      ) : view === "dieta" ? (
+      {view === "dieta" ? (
         <DietAnalysis from={range.from} to={range.to} />
       ) : (
         <>
@@ -126,6 +125,13 @@ export function StatsPage() {
                   hint={`${s.weekly.count === 1 ? "1 settimana" : `${s.weekly.count} settimane`}${s.weekly.partial ? `, ${s.weekly.partial} parzial${s.weekly.partial === 1 ? "e" : "i"}` : ""}`}
                 />
                 <Tile label="Mediana a settimana" value={money(s.weekly.median)} />
+                {monthly && (
+                  <Tile
+                    label="Al mese, ai consumi attuali"
+                    value={`${monthly.missing ? "≥ " : ""}${formatCents(monthly.cents)}`}
+                    hint={monthly.missing ? `dal diario degli ultimi 30 giorni; ${monthly.missing} prodotti senza costo o con pochi giorni` : "dal diario degli ultimi 30 giorni"}
+                  />
+                )}
               </div>
 
               {s.weeks.length > 1 && (
@@ -178,6 +184,11 @@ export function StatsPage() {
                           {t.purchases === 1 ? "1 acquisto" : `${t.purchases} acquisti`}
                           {t.avgIntervalDays != null && ` · circa ogni ${Math.round(t.avgIntervalDays)} giorni`}
                         </span>
+                        {eatenById.get(t.productId) && (
+                          <span className="small rank-detail" data-testid="top-consumption">
+                            {frequencyText(eatenById.get(t.productId)!)} · {consumptionText(eatenById.get(t.productId)!)}
+                          </span>
+                        )}
                         <div className="rowbar" style={{ width: `${(t.totalCents / maxTop) * 100}%` }} aria-hidden="true" />
                       </Link>
                     </li>

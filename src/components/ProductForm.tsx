@@ -259,7 +259,10 @@ export function ProductForm({ product, initialName, start, onSaved, onUseExistin
         <Field label="Confezione" hint={pkg ? formatAmount(pkg, sizeUnit) : "es. 500 g, 1 l"}>
           <input className="input" value={packageAmount} onChange={(e) => setPackageAmount(e.target.value)} inputMode="decimal" />
         </Field>
-        <Field label="Peso medio a pezzo" hint={piece ? formatAmount(piece, sizeUnit) : "es. banana 120 g"}>
+        <Field
+          label="Peso medio a pezzo"
+          hint={`${piece ? `${formatAmount(piece, sizeUnit)} · ` : "es. banana 120 g · "}per i prodotti contati a pezzi: nello scontrino scrivi i pezzi, nel diario usa la porzione «Pezzo»`}
+        >
           <input className="input" value={avgPieceAmount} onChange={(e) => setAvgPieceAmount(e.target.value)} inputMode="decimal" />
         </Field>
       </div>
