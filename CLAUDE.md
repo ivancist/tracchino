@@ -2,6 +2,7 @@
 
 Personal single-user webapp: grocery receipts, product nutrition, food diary, and cost analysis.
 The full plan, data model and phases are in @PLAN.md — read it before starting any phase.
+Current status, work in progress and next steps: @docs/PROGRESS.md — read it first in every new session and keep it updated.
 
 ## Stack
 - Cloudflare Worker with Static Assets (one Worker serves the SPA and `/api/*`)
