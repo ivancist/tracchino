@@ -5,7 +5,7 @@ Ultimo aggiornamento: 2026-10-03 (giorno in corso anche nella Dieta)
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `04878a3`** (versione Worker `365683da`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- **Produzione = `main` = `346e75b`** (versione Worker `371e9b5c`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
 - Migrazioni applicate in produzione: `0000`…`0008` (ultime: `0007_stock_adjustments`, `0008_piece_weight`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–7 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
@@ -342,6 +342,8 @@ Richieste dell'utente dopo la riorganizzazione.
 - `worker/diary-day.ts` `isDayComplete` (colazione, pranzo, cena), usato da `/api/pantry` e da `/api/analysis` (+ `simulate`): oggi resta fuori da medie, elenco e simulazione finché è incompleto; `todayExcluded` nella risposta e avviso nella pagina.
 - Elenco "Valore dei prodotti": tolto "comprato in X giorni (N kg)".
 - Test: 488 Vitest (solo colazione → escluso, media n.d.; con pranzo e cena → 815,8 kcal), 54 e2e. Mutazione (oggi mai escluso) rilevata.
+- In produzione dal 2026-10-03 (solo codice): fast-forward di `main` a `346e75b`, deploy, smoke test → 302.
+- Prossimo passo chiesto dall'utente: la UI della sezione Diario.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
