@@ -109,6 +109,7 @@ export function DiaryPage() {
             <Tile label="Carboidrati" total={d.totals.carbs} format={grams} testId="total-carbs" />
             <Tile label="di cui zuccheri" total={d.totals.sugars} format={grams} testId="total-sugars" />
             <Tile label="Fibre" total={d.totals.fiber} format={grams} testId="total-fiber" />
+            <Tile label="Sale" total={d.totals.salt} format={(v) => `${formatNumber(v, 2)} g`} testId="total-salt" />
           </div>
 
           {MEALS.map((meal) => {

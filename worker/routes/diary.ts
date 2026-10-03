@@ -17,6 +17,7 @@ type EntryRow = Omit<DiaryEntry, "nutrients" | "costCents" | "costSource" | "cos
   sugars100: number | null;
   saturatedFat100: number | null;
   fiber100: number | null;
+  salt100: number | null;
 };
 
 /** Grams eaten: typed directly, or the portion (which must belong to the product) × quantity. */
@@ -37,7 +38,8 @@ const ENTRY_SELECT = `
          e.amount, e.portion_id as portionId, po.name as portionName, e.portion_qty as portionQty,
          p.package_amount as packageAmount, p.avg_piece_amount as avgPieceAmount,
          p.kcal_100 as kcal100, p.protein_100 as protein100, p.fat_100 as fat100, p.carbs_100 as carbs100,
-         p.sugars_100 as sugars100, p.saturated_fat_100 as saturatedFat100, p.fiber_100 as fiber100
+         p.sugars_100 as sugars100, p.saturated_fat_100 as saturatedFat100, p.fiber_100 as fiber100,
+         p.salt_100 as salt100
     from diary_entries e
     join products p on p.id = e.product_id
     left join portions po on po.id = e.portion_id`;
@@ -86,12 +88,13 @@ export const diaryRoutes = new Hono<AppEnv>()
         sugars100,
         saturatedFat100,
         fiber100,
+        salt100,
         ...row
       }) => {
         const cost = costs.get(row.productId) ?? null;
         return {
           ...row,
-          nutrients: nutrientsFor({ kcal100, protein100, fat100, carbs100, sugars100, saturatedFat100, fiber100 }, row.amount),
+          nutrients: nutrientsFor({ kcal100, protein100, fat100, carbs100, sugars100, saturatedFat100, fiber100, salt100 }, row.amount),
           costCents: costCents(cost, row.amount),
           costSource: cost?.source ?? null,
           costEstimated: cost?.estimated ?? false,

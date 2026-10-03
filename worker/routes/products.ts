@@ -14,7 +14,8 @@ const PRODUCT_SELECT = `
          p.package_amount as packageAmount, p.avg_piece_amount as avgPieceAmount,
          p.kcal_100 as kcal100, p.protein_100 as protein100, p.fat_100 as fat100,
          p.carbs_100 as carbs100, p.sugars_100 as sugars100,
-         p.saturated_fat_100 as saturatedFat100, p.fiber_100 as fiber100, p.nutrition_source as nutritionSource,
+         p.saturated_fat_100 as saturatedFat100, p.fiber_100 as fiber100, p.salt_100 as salt100,
+         p.nutrition_source as nutritionSource,
          count(ri.id) as purchaseCount, max(r.date) as lastPurchaseDate
     from products p
     left join product_groups g on g.id = p.group_id
@@ -111,7 +112,7 @@ export const productRoutes = new Hono<AppEnv>()
         .prepare(
           `update products set brand = ?, barcode = ?, package_amount = ?, avg_piece_amount = ?, group_id = ?,
                   kcal_100 = ?, protein_100 = ?, fat_100 = ?, carbs_100 = ?, sugars_100 = ?,
-                  saturated_fat_100 = ?, fiber_100 = ?, nutrition_source = ?
+                  saturated_fat_100 = ?, fiber_100 = ?, salt_100 = ?, nutrition_source = ?
             where id = ?`,
         )
         .bind(
@@ -127,6 +128,7 @@ export const productRoutes = new Hono<AppEnv>()
           nutrition.sugars100,
           nutrition.saturatedFat100,
           nutrition.fiber100,
+          nutrition.salt100,
           nutrition.nutritionSource,
           intoId,
         ),

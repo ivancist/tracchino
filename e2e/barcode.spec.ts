@@ -133,7 +133,7 @@ test("barcode nuovo → prodotto precompilato da Open Food Facts, salvato con fo
         brand: "Ferrero",
         unit: "g",
         packageAmount: 400,
-        nutrition: { kcal100: 539, protein100: 6.3, fat100: 30.9, carbs100: 57.5, sugars100: 56.3, saturatedFat100: 10.6, fiber100: null },
+        nutrition: { kcal100: 539, protein100: 6.3, fat100: 30.9, carbs100: 57.5, sugars100: 56.3, saturatedFat100: 10.6, fiber100: null, salt100: 0.11 },
         warnings: [],
       },
     } satisfies OffLookup,
@@ -152,6 +152,7 @@ test("barcode nuovo → prodotto precompilato da Open Food Facts, salvato con fo
   await expect(page.getByLabel("Grassi (g)")).toHaveValue("30,9");
   await expect(page.getByLabel("di cui saturi (g)")).toHaveValue("10,6");
   await expect(page.getByLabel("Fibre (g)")).toHaveValue("");
+  await expect(page.getByLabel("Sale (g)")).toHaveValue("0,11");
   await expect(page.getByText("Fonte: Open Food Facts")).toBeVisible();
   await expect(page.getByTestId("nutrition-warnings")).toBeHidden(); // 4·6,3 + 9·30,9 + 4·57,5 ≈ 533 kcal
 
@@ -159,7 +160,7 @@ test("barcode nuovo → prodotto precompilato da Open Food Facts, salvato con fo
   await expect(page).toHaveURL(/\/prodotti$/);
   const list = (await (await request.get("/api/products")).json()) as Product[];
   const saved = list.find((p) => p.barcode === code)!;
-  expect(saved).toMatchObject({ name, brand: "Ferrero", packageAmount: 400, kcal100: 539, fat100: 30.9, saturatedFat100: 10.6, fiber100: null, nutritionSource: "off" });
+  expect(saved).toMatchObject({ name, brand: "Ferrero", packageAmount: 400, kcal100: 539, fat100: 30.9, saturatedFat100: 10.6, fiber100: null, salt100: 0.11, nutritionSource: "off" });
 });
 
 test("prodotto assente da OFF: valori a mano, avviso di plausibilità, fonte manuale", async ({ page, request }, info) => {
@@ -232,7 +233,7 @@ test("modifica a mano dei valori importati → la fonte diventa manuale", async 
         brand: null,
         unit: "ml",
         packageAmount: 1000,
-        nutrition: { kcal100: 46, protein100: 3.3, fat100: 1.6, carbs100: 4.9, sugars100: 4.9, saturatedFat100: 1, fiber100: 0 },
+        nutrition: { kcal100: 46, protein100: 3.3, fat100: 1.6, carbs100: 4.9, sugars100: 4.9, saturatedFat100: 1, fiber100: 0, salt100: null },
         warnings: [],
       },
     } satisfies OffLookup,

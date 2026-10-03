@@ -38,6 +38,7 @@ const MEASURE_LABELS: Record<Measure, string> = {
   carbs: "Carboidrati",
   sugars: "Zuccheri",
   fiber: "Fibre",
+  salt: "Sale",
 };
 
 function measureText(m: Measure, v: number | null, signed = false): string {
@@ -45,6 +46,7 @@ function measureText(m: Measure, v: number | null, signed = false): string {
   const sign = signed && v > 0 ? "+" : "";
   if (m === "cost") return `${sign}${formatCents(Math.round(v))}`;
   if (m === "kcal") return `${sign}${formatNumber(v, 0)} kcal`;
+  if (m === "salt") return `${sign}${formatNumber(v, 2)} g`;
   return `${sign}${formatNumber(v)} g`;
 }
 

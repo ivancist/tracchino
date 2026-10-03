@@ -30,6 +30,8 @@ export type OffPrefill = {
 };
 
 const KJ_PER_KCAL = 4.184;
+const SALT_PER_SODIUM = 2.5;
+const sodiumToSalt = (sodium: number | null) => (sodium == null ? null : sodium * SALT_PER_SODIUM);
 
 function num(v: unknown): number | null {
   // Number("") is 0: an empty string on OFF means "not given", never zero.
@@ -99,6 +101,8 @@ export function mapOffProduct(barcode: string, p: OffRawProduct): OffPrefill {
     sugars100: keep(num(n.sugars_100g), 100, "Zuccheri", 1),
     saturatedFat100: keep(num(n["saturated-fat_100g"]), 100, "Grassi saturi", 1),
     fiber100: keep(num(n.fiber_100g), 100, "Fibre", 1),
+    // Salt as on EU labels; only sodium given → × 2.5
+    salt100: keep(num(n.salt_100g) ?? sodiumToSalt(num(n.sodium_100g)), 100, "Sale", 2),
   };
   const size = packageSize(p);
   const brand = typeof p.brands === "string" ? text(p.brands.split(",")[0], 80) : null;

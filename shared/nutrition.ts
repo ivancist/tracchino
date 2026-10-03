@@ -10,9 +10,20 @@ export type Nutrition = {
   saturatedFat100: number | null;
   /** Fibre, not included in carbs100 (EU labels). */
   fiber100: number | null;
+  /** Salt (EU labels give salt, = sodium × 2.5). No energy, but part of the mass. */
+  salt100: number | null;
 };
 
-export const NUTRITION_KEYS = ["kcal100", "protein100", "fat100", "saturatedFat100", "carbs100", "sugars100", "fiber100"] as const;
+export const NUTRITION_KEYS = [
+  "kcal100",
+  "protein100",
+  "fat100",
+  "saturatedFat100",
+  "carbs100",
+  "sugars100",
+  "fiber100",
+  "salt100",
+] as const;
 
 /**
  * kcal from macros (EU factors): 4 per g of protein and carbohydrate, 9 per g of fat, 2 per g of fibre (when known).
@@ -26,11 +37,11 @@ const KCAL_TOLERANCE_ABS = 20;
 
 export function nutritionWarnings(n: Nutrition): string[] {
   const out: string[] = [];
-  const macros = [n.protein100, n.fat100, n.carbs100, n.fiber100];
-  if (macros.some((v) => v != null && v > 100)) out.push("Un macronutriente supera 100 g per 100 g");
-  const known = macros.filter((v): v is number => v != null);
+  const parts = [n.protein100, n.fat100, n.carbs100, n.fiber100, n.salt100];
+  if (parts.some((v) => v != null && v > 100)) out.push("Un valore supera 100 g per 100 g");
+  const known = parts.filter((v): v is number => v != null);
   if (known.length > 1 && known.reduce((s, v) => s + v, 0) > 100.5) {
-    out.push("Proteine, grassi, carboidrati e fibre insieme superano 100 g per 100 g");
+    out.push("Proteine, grassi, carboidrati, fibre e sale insieme superano 100 g per 100 g");
   }
   if (n.saturatedFat100 != null && n.fat100 != null && n.saturatedFat100 > n.fat100 + 0.5) {
     out.push("I grassi saturi superano i grassi");

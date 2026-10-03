@@ -29,6 +29,13 @@
       "when": 1791019970067,
       "tag": "0003_fiber_saturated",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791020924355,
+      "tag": "0004_salt",
+      "breakpoints": true
     }
   ]
 }

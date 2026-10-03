@@ -1,0 +1,1 @@
+ALTER TABLE `products` ADD `salt_100` real;

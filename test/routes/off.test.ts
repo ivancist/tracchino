@@ -53,7 +53,7 @@ describe("GET /api/off/:barcode", () => {
         brand: "Mutti",
         unit: "g",
         packageAmount: 700,
-        nutrition: { kcal100: 36, protein100: 1.6, fat100: 0.2, carbs100: 6.2, sugars100: 4.5, saturatedFat100: null, fiber100: null },
+        nutrition: { kcal100: 36, protein100: 1.6, fat100: 0.2, carbs100: 6.2, sugars100: 4.5, saturatedFat100: null, fiber100: null, salt100: null },
         warnings: [],
       },
     });
@@ -134,15 +134,16 @@ describe("products: barcode and nutrition source", () => {
 
   it("stores saturated fat and fibre, validates them and keeps them on merge", async () => {
     const api = await createTestApi();
-    const id = (await api.post<{ id: number }>("/api/products", { name: "Pasta integrale", unit: "g", fat100: 2.5, saturatedFat100: 0.5, fiber100: 7 }))
+    const id = (await api.post<{ id: number }>("/api/products", { name: "Pasta integrale", unit: "g", fat100: 2.5, saturatedFat100: 0.5, fiber100: 7, salt100: 0.01 }))
       .body.id;
-    expect((await api.get<Product>(`/api/products/${id}`)).body).toMatchObject({ saturatedFat100: 0.5, fiber100: 7 });
+    expect((await api.get<Product>(`/api/products/${id}`)).body).toMatchObject({ saturatedFat100: 0.5, fiber100: 7, salt100: 0.01 });
+    expect((await api.post("/api/products", { name: "X", unit: "g", salt100: 100.5 })).status).toBe(400);
     expect((await api.post("/api/products", { name: "X", unit: "g", fiber100: 101 })).status).toBe(400);
     expect((await api.post("/api/products", { name: "X", unit: "g", saturatedFat100: -1 })).status).toBe(400);
     // Merge into a product without nutrition: the source's values move over
     const target = (await api.post<{ id: number }>("/api/products", { name: "Pasta int.", unit: "g" })).body.id;
     expect((await api.post(`/api/products/${id}/merge`, { intoId: target })).status).toBe(200);
-    expect((await api.get<Product>(`/api/products/${target}`)).body).toMatchObject({ fat100: 2.5, saturatedFat100: 0.5, fiber100: 7 });
+    expect((await api.get<Product>(`/api/products/${target}`)).body).toMatchObject({ fat100: 2.5, saturatedFat100: 0.5, fiber100: 7, salt100: 0.01 });
   });
 
   it("records an OFF import as 'off' until a value is edited by hand", async () => {

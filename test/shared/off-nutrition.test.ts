@@ -46,6 +46,7 @@ describe("nutritionWarnings", () => {
     sugars100: null,
     saturatedFat100: null,
     fiber100: null,
+    salt100: null,
     ...v,
   });
 
@@ -65,9 +66,9 @@ describe("nutritionWarnings", () => {
 
   it("flags impossible macros", () => {
     expect(nutritionWarnings(n({ protein100: 60, fat100: 30, carbs100: 20 }))).toEqual([
-      "Proteine, grassi, carboidrati e fibre insieme superano 100 g per 100 g",
+      "Proteine, grassi, carboidrati, fibre e sale insieme superano 100 g per 100 g",
     ]);
-    expect(nutritionWarnings(n({ protein100: 120 }))).toEqual(["Un macronutriente supera 100 g per 100 g"]);
+    expect(nutritionWarnings(n({ protein100: 120 }))).toEqual(["Un valore supera 100 g per 100 g"]);
     expect(nutritionWarnings(n({ carbs100: 10, sugars100: 12 }))).toEqual(["Gli zuccheri superano i carboidrati"]);
     expect(nutritionWarnings(n({ carbs100: 10, sugars100: 10.5 }))).toEqual([]); // rounding on labels
   });
@@ -76,8 +77,13 @@ describe("nutritionWarnings", () => {
     expect(nutritionWarnings(n({ fat100: 10, saturatedFat100: 12 }))).toEqual(["I grassi saturi superano i grassi"]);
     expect(nutritionWarnings(n({ fat100: 10, saturatedFat100: 10.5 }))).toEqual([]);
     expect(nutritionWarnings(n({ protein100: 30, fat100: 30, carbs100: 30, fiber100: 15 }))).toEqual([
-      "Proteine, grassi, carboidrati e fibre insieme superano 100 g per 100 g",
+      "Proteine, grassi, carboidrati, fibre e sale insieme superano 100 g per 100 g",
     ]);
+    // Salt has no energy but is part of the mass: 40 + 30 + 25 + 6 = 101 g
+    expect(nutritionWarnings(n({ protein100: 40, fat100: 30, carbs100: 25, salt100: 6 }))).toEqual([
+      "Proteine, grassi, carboidrati, fibre e sale insieme superano 100 g per 100 g",
+    ]);
+    expect(nutritionWarnings(n({ salt100: 101 }))).toEqual(["Un valore supera 100 g per 100 g"]);
     // Wholemeal pasta: 4·13 + 9·2.5 + 4·64 + 2·7 = 344.5 kcal (without fibre it would be 330.5)
     const base = { protein100: 13, fat100: 2.5, carbs100: 64, fiber100: 7 };
     expect(nutritionWarnings(n({ ...base, kcal100: 345 }))).toEqual([]);
@@ -108,9 +114,16 @@ describe("mapOffProduct", () => {
       brand: "Mutti",
       unit: "g",
       packageAmount: 700,
-      nutrition: { kcal100: 36, protein100: 1.6, fat100: 0.2, carbs100: 6.2, sugars100: 4.5, saturatedFat100: null, fiber100: null },
+      nutrition: { kcal100: 36, protein100: 1.6, fat100: 0.2, carbs100: 6.2, sugars100: 4.5, saturatedFat100: null, fiber100: null, salt100: null },
       warnings: [],
     });
+  });
+
+  it("maps salt, or sodium × 2.5 when salt is missing; 2 decimals", () => {
+    expect(mapOffProduct("1", { nutriments: { salt_100g: 1.234, sodium_100g: 9 } }).nutrition.salt100).toBe(1.23);
+    expect(mapOffProduct("1", { nutriments: { sodium_100g: "0,4" } }).nutrition.salt100).toBe(1); // 0.4 × 2.5
+    expect(mapOffProduct("1", { nutriments: { salt_100g: "" } }).nutrition.salt100).toBeNull();
+    expect(mapOffProduct("1", { nutriments: { salt_100g: 120 } }).warnings).toEqual(["Sale su Open Food Facts non plausibile (120): scartato"]);
   });
 
   it("maps saturated fat and fibre", () => {
@@ -125,7 +138,7 @@ describe("mapOffProduct", () => {
       brand: null,
       unit: "g",
       packageAmount: null,
-      nutrition: { kcal100: null, protein100: null, fat100: null, carbs100: null, sugars100: null, saturatedFat100: null, fiber100: null },
+      nutrition: { kcal100: null, protein100: null, fat100: null, carbs100: null, sugars100: null, saturatedFat100: null, fiber100: null, salt100: null },
       warnings: [],
     });
   });

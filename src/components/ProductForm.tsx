@@ -19,6 +19,7 @@ const NUTRIENTS = [
   ["carbs100", "Carboidrati (g)"],
   ["sugars100", "di cui zuccheri (g)"],
   ["fiber100", "Fibre (g)"],
+  ["salt100", "Sale (g)"],
 ] as const;
 
 const NEW_GROUP = "__new__";

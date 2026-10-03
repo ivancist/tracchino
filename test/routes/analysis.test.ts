@@ -101,7 +101,7 @@ describe("GET /api/analysis/simulate", () => {
     const s = await sim(`fromProduct=${pasta}&toProduct=${pasta}`);
     expect(s).toMatchObject({ affectedEntries: 2, affectedDays: 2, loggedDays: 2 });
     // Saturated fat and fibre aren't set on these products: unknown, not 0
-    expect(s.delta).toEqual({ cost: 0, kcal: 0, protein: 0, fat: 0, saturatedFat: null, carbs: 0, sugars: 0, fiber: null });
+    expect(s.delta).toEqual({ cost: 0, kcal: 0, protein: 0, fat: 0, saturatedFat: null, carbs: 0, sugars: 0, fiber: null, salt: null });
   });
 
   it("pasta → rice: +6 cents, −16.2 kcal; at 1.5×: +27 cents", async () => {

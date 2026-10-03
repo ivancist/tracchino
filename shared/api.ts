@@ -43,6 +43,7 @@ export type Product = {
   sugars100: number | null;
   saturatedFat100: number | null;
   fiber100: number | null;
+  salt100: number | null;
   nutritionSource: "off" | "manual" | null;
   purchaseCount: number;
   lastPurchaseDate: string | null;
