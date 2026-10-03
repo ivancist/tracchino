@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { Product } from "../../shared/api";
 import { PriceSection } from "../components/PriceSection";
+import { PortionsSection } from "../components/PortionsSection";
 import { ProductForm, type BarcodeStart } from "../components/ProductForm";
 import { ProductPicker, productLabel } from "../components/ProductPicker";
 import { ConfirmButton, ErrorText, PageHeader, QueryState } from "../components/ui";
@@ -41,6 +42,7 @@ export function ProductEditPage() {
         onSaved={() => navigate("/prodotti")}
         onUseExisting={(existingId) => navigate(`/prodotti/${existingId}`)}
       />
+      {product && <PortionsSection product={product} />}
 
       {product && (
         <section className="card danger-zone">

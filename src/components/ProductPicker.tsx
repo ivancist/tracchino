@@ -14,10 +14,12 @@ type Props = {
   onCreate?: (name: string) => void;
   autoFocus?: boolean;
   label?: string;
+  /** 0..1 ranking hint (default: how often it's bought). The diary passes how often and how recently it's eaten. */
+  boost?: (product: Product) => number;
 };
 
 /** Combobox: fuzzy search over products (frequent ones first), with a "create" entry for new products. */
-export function ProductPicker({ products, value, onSelect, onCreate, autoFocus, label = "Prodotto" }: Props) {
+export function ProductPicker({ products, value, onSelect, onCreate, autoFocus, label = "Prodotto", boost }: Props) {
   const [query, setQuery] = useState<string | null>(null); // null = showing the selected value
   const [active, setActive] = useState(0);
   const listId = useId();
@@ -26,8 +28,8 @@ export function ProductPicker({ products, value, onSelect, onCreate, autoFocus, 
   const text = query ?? (value ? productLabel(value) : "");
   const open = query !== null;
   const matches = useMemo(
-    () => (open ? rankByQuery(query, products, productLabel, (p) => p.purchaseCount / maxCount, 8) : []),
-    [open, query, products, maxCount],
+    () => (open ? rankByQuery(query, products, productLabel, boost ?? ((p) => p.purchaseCount / maxCount), 8) : []),
+    [open, query, products, maxCount, boost],
   );
   // Only offer to create a name that has letters/digits ("%%" would normalize to nothing).
   // Not when a product with exactly this name already exists (that would only make a duplicate).

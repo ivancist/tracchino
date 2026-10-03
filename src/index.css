@@ -544,6 +544,54 @@ label.button:focus-within {
   border: 1px solid var(--border);
 }
 
+/* ---------- diary ---------- */
+.day-nav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.day-label {
+  margin: 0.25rem 0 1rem;
+  text-align: center;
+}
+
+.add-entry {
+  margin-top: 0.4rem;
+  min-height: var(--tap);
+}
+
+.segmented {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.segmented label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+}
+
+.segmented label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.segmented label:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ---------- barcode scanner ---------- */
 .actions.start {
   justify-content: flex-start;

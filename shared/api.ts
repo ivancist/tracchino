@@ -133,6 +133,40 @@ export type OffLookup =
   | { existingProductId: number; prefill: null }
   | { existingProductId: null; prefill: import("./off").OffPrefill };
 
+export type Portion = { id: number; productId: number; name: string; amount: number };
+
+export type DiaryEntry = {
+  id: number;
+  date: string;
+  meal: import("./diary").Meal;
+  productId: number;
+  productName: string;
+  productBrand: string | null;
+  unit: ProductUnit;
+  /** g or ml eaten. */
+  amount: number;
+  portionId: number | null;
+  portionName: string | null;
+  portionQty: number | null;
+  nutrients: import("./diary").Nutrients;
+  /** null = unknown (never bought, or no purchase with a known quantity), never 0. */
+  costCents: number | null;
+  costSource: "average" | "last" | null;
+  costEstimated: boolean;
+};
+
+export type DiaryDay = {
+  date: string;
+  costMode: import("./diary").CostMode;
+  windowDays: number;
+  entries: DiaryEntry[];
+  totals: Record<import("./diary").Nutrient, import("./diary").Total>;
+  cost: import("./diary").Total;
+};
+
+/** Products eaten recently, most used first: the diary's autocomplete puts them on top. */
+export type FrequentProduct = { productId: number; uses: number; lastDate: string };
+
 export type MatchStatus = "alias" | "proposed" | "uncertain" | "none";
 
 export type ScanLine = {

@@ -2,6 +2,9 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import type {
   Chain,
   Created,
+  DiaryDay,
+  FrequentProduct,
+  Portion,
   LastPrice,
   MeResponse,
   OffLookup,
@@ -15,7 +18,8 @@ import type {
   ReceiptSummary,
   Store,
 } from "../shared/api";
-import type { ChainInput, GroupInput, ProductInput, ReceiptInput, StoreInput } from "../shared/schemas";
+import type { CostMode } from "../shared/diary";
+import type { ChainInput, DiaryEntryInput, GroupInput, PortionInput, ProductInput, ReceiptInput, StoreInput } from "../shared/schemas";
 import { api } from "./api";
 
 export const keys = {
@@ -76,8 +80,8 @@ function useWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, invalid
   });
 }
 
-// Stats depend on everything: every write refreshes them too.
-const catalog = [keys.chains, keys.stores, keys.groups, keys.products, keys.receipts, ["stats"]] as const;
+// Stats and the diary (nutrition, costs from receipts) depend on everything: every write refreshes them too.
+const catalog = [keys.chains, keys.stores, keys.groups, keys.products, keys.receipts, ["stats"], ["diary"]] as const;
 
 export const useSaveChain = () =>
   useWrite(({ id, ...input }: ChainInput & { id?: number }) =>
@@ -128,6 +132,33 @@ export const usePriceStats = (kind: "products" | "groups", id: number | null) =>
     queryFn: () => api.get<PriceStats>(`/api/stats/${kind}/${id}`),
     enabled: id != null,
   });
+
+export const useDiaryDay = (date: string, costMode: CostMode, windowDays: number) =>
+  useQuery({
+    queryKey: ["diary", "day", date, costMode, windowDays],
+    queryFn: () => api.get<DiaryDay>(`/api/diary?date=${date}&costMode=${costMode}&windowDays=${windowDays}`),
+  });
+export const useFrequentProducts = () =>
+  useQuery({ queryKey: ["diary", "frequent"], queryFn: () => api.get<FrequentProduct[]>("/api/diary/frequent") });
+
+export const useSaveDiaryEntry = () =>
+  useWrite(({ id, ...input }: DiaryEntryInput & { id?: number }) =>
+    id ? api.patch<Created>(`/api/diary/${id}`, input) : api.post<Created>("/api/diary", input), [["diary"]]);
+export const useDeleteDiaryEntry = () => useWrite((id: number) => api.del(`/api/diary/${id}`), [["diary"]]);
+
+export const usePortions = (productId: number | null) =>
+  useQuery({
+    queryKey: ["portions", productId],
+    queryFn: () => api.get<Portion[]>(`/api/products/${productId}/portions`),
+    enabled: productId != null,
+  });
+export const useSavePortion = () =>
+  useWrite(({ id, productId, ...input }: PortionInput & { id?: number; productId: number }) =>
+    id ? api.patch<Created>(`/api/portions/${id}`, input) : api.post<Created>(`/api/products/${productId}/portions`, input), [
+    ["portions"],
+    ["diary"],
+  ]);
+export const useDeletePortion = () => useWrite((id: number) => api.del(`/api/portions/${id}`), [["portions"], ["diary"]]);
 
 /** Barcode → product already in the catalog, or a prefill from Open Food Facts (404 when OFF doesn't know it). */
 export const lookupBarcode = (code: string) => api.get<OffLookup>(`/api/off/${code}`);

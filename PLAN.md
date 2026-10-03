@@ -145,6 +145,14 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 - Inserimento per pasto: prodotto (autocomplete, prima i più frequenti e recenti), poi grammi **oppure** porzione × quantità.
 - Gestione delle porzioni salvate per prodotto.
 - Riepilogo giornaliero: kcal, proteine, grassi, carboidrati, zuccheri e **costo stimato** della giornata.
+- Decisioni (2026-10-03):
+  - Costo per grammo dagli scontrini: Σ pagato / Σ quantità (quantità come in `shared/pricing.ts`, stime comprese, segnalate con "≈") sugli acquisti degli **N giorni prima del giorno del diario** (N = 90 predefinito; 30/90/180/365 dalla pagina). Se non ce ne sono, l'ultimo prezzo fino a quel giorno (o il primo acquisto, per giorni precedenti). In alternativa si sceglie "ultimo prezzo". Le preferenze sono salvate nel browser (nessuna migrazione).
+  - Il costo del giorno è la somma dei costi delle voci, ognuno arrotondato al centesimo (coincide con l'elenco a schermo).
+  - Gli acquisti senza quantità nota non danno un costo per grammo; prodotto mai comprato → "n.d.".
+  - Totali: somma dei valori noti con "≥" e il numero di voci senza dato; tutto ignoto → "n.d." (mai 0).
+  - Porzione × quantità si salva come grammi (`amount`) più il riferimento alla porzione: modificare o eliminare la porzione non cambia lo storico.
+  - Autocomplete: prima i prodotti mangiati più spesso negli ultimi 90 giorni, poi quelli comprati più spesso.
+  - Barra in basso: Scontrini, Diario, Statistiche, Prodotti, Altro (Negozi e Account).
 - **Verifiche**: test del calcolo dei macro (grammi e porzioni) e del costo per grammo (media ponderata e ultimo prezzo, prodotto mai acquistato → costo "n.d." e non 0).
 
 ### Fase 6 — Analisi e simulazioni

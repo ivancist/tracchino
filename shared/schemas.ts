@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { cleanBarcode, isValidGtin, normalizeGtin } from "./barcode";
 import { isValidIsoDate } from "./dates";
+import { COST_MODES, COST_WINDOW_DAYS, MEALS } from "./diary";
 import { PRODUCT_UNITS } from "./types";
 
 // Input schemas for every API body. The UI uses the same schemas before sending.
@@ -101,6 +102,40 @@ export const receiptInput = z.object({
   items: z.array(receiptItemInput).min(1, "Aggiungi almeno un prodotto").max(300),
 });
 export type ReceiptInput = z.input<typeof receiptInput>;
+
+/** A saved serving of a product: "1 banana" = 120 g, "1 vasetto" = 125 g. */
+export const portionInput = z.object({
+  name: requiredText(60),
+  amount: positiveInt.max(100_000, "Quantità troppo grande"),
+});
+export type PortionInput = z.input<typeof portionInput>;
+
+/** What was eaten: grams/ml directly, or a saved portion × quantity (exactly one of the two). */
+export const diaryEntryInput = z
+  .object({
+    date: isoDate,
+    meal: z.enum(MEALS),
+    productId: positiveInt,
+    amount: positiveInt.max(100_000, "Quantità troppo grande").nullish().transform((v) => v ?? null),
+    portionId: optionalPositiveInt,
+    portionQty: z.number().positive("La quantità deve essere maggiore di 0").max(100).nullish().transform((v) => v ?? null),
+  })
+  .refine((e) => (e.amount != null) !== (e.portionId != null), {
+    message: "Indica i grammi oppure una porzione",
+    path: ["amount"],
+  })
+  .refine((e) => (e.portionId == null) === (e.portionQty == null), {
+    message: "Indica quante porzioni",
+    path: ["portionQty"],
+  });
+export type DiaryEntryInput = z.input<typeof diaryEntryInput>;
+
+export const diaryDayQuery = z.object({
+  date: isoDate,
+  costMode: z.enum(COST_MODES).default("average"),
+  /** Days before the diary day whose purchases make the average cost. */
+  windowDays: z.coerce.number().int().min(1).max(730).default(COST_WINDOW_DAYS),
+});
 
 /** Newest first; pass the last row's (date, id) as `beforeDate`/`beforeId` to get the next page. */
 export const receiptListQuery = z

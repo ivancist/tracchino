@@ -6,6 +6,7 @@ import { RouterProvider } from "react-router/dom";
 import { ApiError } from "./api";
 import { Layout } from "./components/Layout";
 import { AccountPage } from "./pages/AccountPage";
+import { DiaryPage } from "./pages/DiaryPage";
 import { ProductEditPage } from "./pages/ProductEditPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ReceiptEditPage } from "./pages/ReceiptEditPage";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: "scontrini/nuovo", element: <ReceiptEditPage key="new" /> },
       { path: "scontrini/scansione", element: <ReceiptEditPage key="scan" scan /> },
       { path: "scontrini/:id", element: <ReceiptEditPage key="edit" /> },
+      { path: "diario", element: <DiaryPage /> },
       { path: "prodotti", element: <ProductsPage /> },
       { path: "prodotti/nuovo", element: <ProductEditPage /> },
       { path: "prodotti/:id", element: <ProductEditPage /> },

@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (Fase 4)
+Ultimo aggiornamento: 2026-10-03 (Fase 5)
 
 ## Fasi
 
@@ -12,7 +12,7 @@ Ultimo aggiornamento: 2026-10-03 (Fase 4)
 | 2 Statistiche | ✅ completa (audit + review) | sì (`9e62c5d`) |
 | 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
 | 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
-| 5 Diario | da fare | — |
+| 5 Diario | 🟡 completa in locale, in verifica (branch `phase-5-diary`) | no |
 | 6 Analisi e simulazioni | da fare | — |
 
 ## Fase 3: fatto (branch `phase-3-scan`)
@@ -138,6 +138,37 @@ Ultimo aggiornamento: 2026-10-03 (Fase 4)
 - Fast-forward di `main` a `7e4ab67`, deploy; smoke test senza login (`/`, `/api/me`, `/api/products`, `/api/off/…`, `/api/receipts/1/photo`) → 302.
 - Ancora aperto: prova reale dall'iPhone (zxing con la fotocamera vera, permesso fotocamera su `workers.dev`).
 
+
+## Fase 5: fatto (branch `phase-5-diary`)
+
+- Nessuna migrazione: `portions` e `diary_entries` erano già nello schema iniziale.
+- `shared/diary.ts`:
+  - `nutrientsFor`, `sumKnown`/`sumNutrients` (somma dei noti e numero di mancanti);
+  - `unitCost` (media 90 giorni o ultimo prezzo, da centesimi e grammi grezzi, `estimated`), `costCents` (un solo arrotondamento), `portionAmount`.
+- API:
+  - `GET /api/diary?date&costMode` (voci con valori e costo per voce, totali, costo del giorno);
+  - `GET /api/diary/frequent`;
+  - `POST/PATCH/DELETE /api/diary`: grammi oppure porzione × quantità, la porzione deve essere del prodotto;
+  - `GET/POST /api/products/:id/portions`, `PATCH/DELETE /api/portions/:id`.
+- UI:
+  - pagina Diario (`/diario?data=`): navigazione tra i giorni, riquadri (kcal, costo, P/G/C/zuccheri) con "≥", "n.d." e voci senza dato; pasti con subtotale kcal; tocco su una voce → modifica o elimina;
+  - dialog: pasto, alimento (frequenti in cima, creazione al volo), Grammi o Porzioni (con nuova porzione al volo), anteprima;
+  - modalità del costo nel browser;
+  - sezione Porzioni nella scheda prodotto; barra in basso con Diario e "Altro".
+- Bug trovato dall'e2e: aprendo il dialog prima che i prodotti fossero caricati, il picker offriva solo "Crea" (duplicati). Ora la pagina precarica i prodotti e il picker compare solo a lista pronta.
+- Test: `test/shared/diary.test.ts` (12, valori calcolati a mano), `test/routes/diary.test.ts` (12), `e2e/diary.spec.ts` (3 × 2).
+
+### Verifiche del 2026-10-03
+- `security-auditor`: SECURE, solo punti LOW. Corretto: eliminando una porzione restava `portion_qty` senza `portion_id`. Aggiunti test PATCH (porzione di un altro prodotto, id non numerico).
+- `phase-reviewer`: completa. Corretti o aggiunti:
+  - finestra N configurabile (`windowDays`, 30/90/180/365);
+  - test sul confine dei 90/91 giorni e a cavallo d'anno, unione di prodotti con diario e porzioni, PATCH porzioni (lo storico resta in grammi), acquisto scontato al 100% → costo 0 noto;
+  - testo "come è calcolato".
+- Bug trovato dall'e2e: cambiando un'impostazione del costo il riquadro si chiudeva durante il ricaricamento. Ora le impostazioni stanno fuori dal blocco dei dati.
+- Scala `verify` verde: 355 test, 46 e2e.
+
+## Fase 5: da fare
+1. Merge, deploy (nessuna migrazione), smoke test.
 
 ## Note operative
 
