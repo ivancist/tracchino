@@ -3,7 +3,7 @@ import { addDays } from "../shared/dates";
 
 const euro = (s: string) => new RegExp(`${s}\\s€`);
 
-/** Two consecutive days of our own in 1902–1934 (other specs: diary 1935–1989, stats 2000–2019). */
+/** Two consecutive days of our own in 1902–1934 (other specs: diary 1946–1989, stats 2000–2019). */
 function uniqueDays(project: string): [string, string] {
   const offset = (Date.now() % 3000) * 4 + (project === "mobile" ? 2 : 0);
   const d = addDays("1934-12-01", -offset);
@@ -53,7 +53,7 @@ async function seed(request: APIRequestContext, tag: string, [d1, d2]: [string, 
 }
 
 test("analisi della dieta: costo medio, valore dei prodotti, simulazione di una sostituzione", async ({ page, request }, info) => {
-  const tag = `${Date.now().toString(36)}${info.project.name}`;
+  const tag = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${info.project.name}`;
   const days = uniqueDays(info.project.name);
   await seed(request, tag, days);
 

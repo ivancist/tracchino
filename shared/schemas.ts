@@ -133,6 +133,19 @@ export const diaryEntryInput = z
   });
 export type DiaryEntryInput = z.input<typeof diaryEntryInput>;
 
+/** Several entries at once (repeating a past meal): all valid or none saved. */
+export const diaryBatchInput = z.object({
+  entries: z.array(diaryEntryInput).min(1, "Nessuna voce da aggiungere").max(50),
+});
+export type DiaryBatchInput = z.input<typeof diaryBatchInput>;
+
+/** Past meals of one kind before a day (newest first, identical ones merged). */
+export const recentMealsQuery = z.object({
+  meal: z.enum(MEALS),
+  before: isoDate,
+  limit: z.coerce.number().int().min(1).max(30).default(8),
+});
+
 export const diaryDayQuery = z.object({
   date: isoDate,
   costMode: z.enum(COST_MODES).default("average"),

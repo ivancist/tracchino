@@ -114,3 +114,31 @@ export function costCents(cost: UnitCost | null, amount: number): number | null 
 export function portionAmount(portionGrams: number, qty: number): number {
   return Math.round(portionGrams * qty);
 }
+
+/** One item of a past meal, as needed to repeat it. */
+export type MealItem = { productId: number; amount: number; portionId: number | null; portionQty: number | null };
+
+/** Same products in the same quantities → same key, whatever the order they were entered in. */
+export function mealKey(items: readonly MealItem[]): string {
+  return items
+    .map((i) => `${i.productId}:${i.amount}:${i.portionId ?? ""}:${i.portionQty ?? ""}`)
+    .sort()
+    .join("|");
+}
+
+/**
+ * Past meals of one kind, newest first, identical ones merged (with every date they were eaten on): the usual
+ * breakfast shows once, "eaten on 12 days", instead of twelve copies. Rows: newest date first.
+ */
+export function groupRecentMeals<T extends MealItem & { date: string }>(rows: readonly T[], limit: number): { dates: string[]; items: T[] }[] {
+  const byDate = new Map<string, T[]>();
+  for (const r of rows) byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]);
+  const groups = new Map<string, { dates: string[]; items: T[] }>();
+  for (const [date, items] of [...byDate.entries()].sort(([a], [b]) => b.localeCompare(a))) {
+    const key = mealKey(items);
+    const group = groups.get(key);
+    if (group) group.dates.push(date);
+    else groups.set(key, { dates: [date], items });
+  }
+  return [...groups.values()].slice(0, limit);
+}

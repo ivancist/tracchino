@@ -167,6 +167,17 @@ export type DiaryDay = {
   cost: import("./diary").Total;
 };
 
+/** An entry of a past meal, with what's needed to show it and repeat it. */
+export type PastMealItem = import("./diary").MealItem & {
+  productName: string;
+  productBrand: string | null;
+  unit: ProductUnit;
+  groupId: number | null;
+  portionName: string | null;
+};
+/** A past meal; `dates` lists every day it was eaten exactly like this, newest first. */
+export type PastMeal = { dates: string[]; items: PastMealItem[] };
+
 /** Products eaten recently, most used first: the diary's autocomplete puts them on top. */
 export type FrequentProduct = { productId: number; uses: number; lastDate: string };
 

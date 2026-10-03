@@ -6,6 +6,7 @@ import type {
   DietAnalysis,
   SimulationResult,
   FrequentProduct,
+  PastMeal,
   Portion,
   LastPrice,
   MeResponse,
@@ -20,8 +21,8 @@ import type {
   ReceiptSummary,
   Store,
 } from "../shared/api";
-import type { CostMode } from "../shared/diary";
-import type { ChainInput, DiaryEntryInput, GroupInput, PortionInput, ProductInput, ReceiptInput, StoreInput } from "../shared/schemas";
+import type { CostMode, Meal } from "../shared/diary";
+import type { ChainInput, DiaryBatchInput, DiaryEntryInput, GroupInput, PortionInput, ProductInput, ReceiptInput, StoreInput } from "../shared/schemas";
 import { api } from "./api";
 
 export const keys = {
@@ -177,6 +178,13 @@ export const useFrequentProducts = () =>
 export const useSaveDiaryEntry = () =>
   useWrite(({ id, ...input }: DiaryEntryInput & { id?: number }) =>
     id ? api.patch<Created>(`/api/diary/${id}`, input) : api.post<Created>("/api/diary", input), [["diary"]]);
+export const useRecentMeals = (meal: Meal, before: string) =>
+  useQuery({
+    queryKey: ["diary", "meals", meal, before],
+    queryFn: () => api.get<PastMeal[]>(`/api/diary/meals?meal=${meal}&before=${before}`),
+  });
+export const useAddDiaryBatch = () =>
+  useWrite((input: DiaryBatchInput) => api.post<{ ids: number[] }>("/api/diary/batch", input), [["diary"]]);
 export const useDeleteDiaryEntry = () => useWrite((id: number) => api.del(`/api/diary/${id}`), [["diary"]]);
 
 export const usePortions = (productId: number | null) =>

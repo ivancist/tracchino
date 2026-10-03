@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MEALS as DB_MEALS } from "../../db/schema";
-import { costCents, MEALS, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
+import { costCents, groupRecentMeals, mealKey, MEALS, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
 
 const banana = { kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8, sugars100: null, saturatedFat100: 0.1, fiber100: 2.6, salt100: 0.01 };
 
@@ -100,5 +100,37 @@ describe("portions", () => {
   });
   it("meals match the database constraint", () => {
     expect(MEALS).toEqual(DB_MEALS);
+  });
+});
+
+describe("recent meals", () => {
+  const item = (date: string, productId: number, amount: number, portionId: number | null = null, portionQty: number | null = null) => ({
+    date,
+    productId,
+    amount,
+    portionId,
+    portionQty,
+  });
+
+  it("the key ignores entry order but not quantities or portions", () => {
+    expect(mealKey([item("d", 1, 80), item("d", 2, 120)])).toBe(mealKey([item("d", 2, 120), item("d", 1, 80)]));
+    expect(mealKey([item("d", 1, 80)])).not.toBe(mealKey([item("d", 1, 90)]));
+    expect(mealKey([item("d", 1, 120, 7, 1)])).not.toBe(mealKey([item("d", 1, 120)]));
+  });
+
+  it("merges identical meals, newest first, and limits the list", () => {
+    const rows = [
+      // Same breakfast on 3 days (entered in different orders), a different one on 2026-10-02
+      item("2026-10-03", 1, 200), item("2026-10-03", 2, 30),
+      item("2026-10-02", 1, 200), item("2026-10-02", 3, 40),
+      item("2026-10-01", 2, 30), item("2026-10-01", 1, 200),
+      item("2026-09-30", 1, 200), item("2026-09-30", 2, 30),
+      item("2026-09-01", 4, 10),
+    ];
+    const groups = groupRecentMeals(rows, 10);
+    expect(groups.map((g) => g.dates)).toEqual([["2026-10-03", "2026-10-01", "2026-09-30"], ["2026-10-02"], ["2026-09-01"]]);
+    expect(groups[0]!.items.map((i) => i.productId)).toEqual([1, 2]); // the newest occurrence's entries
+    expect(groupRecentMeals(rows, 2)).toHaveLength(2);
+    expect(groupRecentMeals([], 5)).toEqual([]);
   });
 });

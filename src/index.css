@@ -1009,3 +1009,55 @@ ul.notice {
   align-items: flex-end;
   white-space: nowrap;
 }
+
+/* ---------- diary: meal totals, repeating a past meal ---------- */
+.meal-nutrients {
+  margin: -0.25rem 0 0.5rem;
+}
+
+.meal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.choices {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.choice {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+}
+
+.choice.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice input {
+  margin-top: 0.25rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  font-weight: 600;
+}
+
+.line.excluded {
+  opacity: 0.6;
+}

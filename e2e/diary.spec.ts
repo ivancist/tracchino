@@ -4,11 +4,12 @@ import { addDays } from "../shared/dates";
 const euro = (s: string) => new RegExp(`${s}\\s€`);
 
 /**
- * Each run writes on its own day in 1935–1989: never shared between runs/projects, and outside the years other
+ * Each run writes on its own day in 1946–1989: never shared between runs/projects, and outside the years other
  * specs use (stats: 2000–2019, analysis: before 1935).
  */
-function uniqueDay(project: string, test: 0 | 1): string {
-  const offset = (Date.now() % 5000) * 4 + (project === "mobile" ? 1 : 0) + test * 2;
+function uniqueDay(project: string, test: 0 | 1 | 2): string {
+  // ≤ 16000 days back from 1989-12-01: stays within 1946–1989
+  const offset = (Date.now() % 2000) * 8 + (project === "mobile" ? 1 : 0) + test * 2;
   return addDays("1989-12-01", -offset);
 }
 
@@ -20,6 +21,9 @@ test.beforeEach(() => {
 test.afterEach(async ({ request }) => {
   for (const id of receiptIds) await request.delete(`/api/receipts/${id}`);
 });
+
+/** Never a prefix of another test's tag (product searches are prefix-based). */
+const uniqueTag = (project: string) => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${project}`;
 
 async function seed(request: APIRequestContext, tag: string, day: string) {
   const post = async (path: string, data: unknown) => {
@@ -56,7 +60,7 @@ async function seed(request: APIRequestContext, tag: string, day: string) {
 }
 
 test("diario: grammi e porzioni, totali con costo stimato, n.d. per i prodotti mai comprati", async ({ page, request }, info) => {
-  const tag = `${Date.now().toString(36)}${info.project.name}`;
+  const tag = uniqueTag(info.project.name);
   const day = uniqueDay(info.project.name, 0);
   await seed(request, tag, day);
 
@@ -140,7 +144,7 @@ test("diario: grammi e porzioni, totali con costo stimato, n.d. per i prodotti m
 });
 
 test("diario: nuova porzione creata al volo, navigazione tra i giorni", async ({ page, request }, info) => {
-  const tag = `${Date.now().toString(36)}${info.project.name}p`;
+  const tag = uniqueTag(info.project.name);
   const day = uniqueDay(info.project.name, 1);
   const { pasta } = await seed(request, tag, day);
 
@@ -182,4 +186,85 @@ test("navigazione: Diario nella barra, Negozi sotto Altro", async ({ page }) => 
   await page.getByRole("link", { name: /Negozi e catene/ }).click();
   await expect(page).toHaveURL(/\/negozi$/);
   await expect(nav.getByRole("link", { name: "Altro" })).toHaveClass(/active/);
+});
+
+test("diario: ripeti un pasto precedente cambiando marca e quantità; totali del pasto", async ({ page, request }, info) => {
+  const tag = uniqueTag(info.project.name);
+  const day = uniqueDay(info.project.name, 2);
+  const post = async (path: string, data: unknown) => {
+    const res = await request.post(path, { data });
+    expect(res.status(), `${path}: ${await res.text()}`).toBe(201);
+    return ((await res.json()) as { id: number }).id;
+  };
+  const groupId = await post("/api/groups", { name: `Yogurt ${tag}` });
+  const yogurtA = await post("/api/products", { name: `Yogurt ${tag}`, brand: "Marca A", unit: "g", groupId, packageAmount: 125, kcal100: 60, protein100: 4 });
+  await post("/api/products", { name: `Yogurt ${tag}`, brand: "Marca B", unit: "g", groupId, packageAmount: 125, kcal100: 70, protein100: 4, fat100: 3 });
+  const yogurtB = ((await (await request.get("/api/products")).json()) as { id: number; name: string; brand: string }[]).find(
+    (p) => p.name === `Yogurt ${tag}` && p.brand === "Marca B",
+  )!.id;
+  const avena = await post("/api/products", {
+    name: `Avena ${tag}`,
+    unit: "g",
+    packageAmount: 500,
+    kcal100: 370,
+    protein100: 13,
+    fat100: 7,
+    fiber100: 10,
+    salt100: 0.02,
+  });
+  const vasetto = await post(`/api/products/${yogurtA}/portions`, { name: "1 vasetto", amount: 125 });
+  const chainId = await post("/api/chains", { name: `E2E Diario ${tag}` });
+  const storeId = await post("/api/stores", { chainId, name: "Sede" });
+  receiptIds.push(
+    await post("/api/receipts", {
+      storeId,
+      date: addDays(day, -5),
+      items: [
+        { productId: yogurtB, priceFullCents: 89, pieces: 1 },
+        { productId: avena, priceFullCents: 129, pieces: 1 },
+      ],
+    }),
+  );
+  // The usual breakfast on the two previous days
+  for (const d of [addDays(day, -1), addDays(day, -2)]) {
+    await post("/api/diary", { date: d, meal: "colazione", productId: yogurtA, portionId: vasetto, portionQty: 1 });
+    await post("/api/diary", { date: d, meal: "colazione", productId: avena, amount: 40 });
+  }
+
+  await page.goto(`/diario?data=${day}`);
+  await page.getByRole("button", { name: "Ripeti un colazione precedente" }).click();
+  const dialog = page.getByRole("dialog", { name: "Ripeti colazione" });
+  await expect(dialog.getByTestId("past-meal").first()).toContainText("Uguale in 2 giorni");
+  await expect(dialog.getByTestId("past-meal").first()).toContainText(`1 × 1 vasetto`);
+  await dialog.getByTestId("past-meal").first().click();
+
+  const lines = dialog.getByTestId("repeat-line");
+  await expect(lines).toHaveCount(2);
+  // Other brand: the same group comes first in the suggestions
+  await dialog.getByLabel("Prodotto 1").fill(`Yogurt ${tag}`);
+  await dialog.getByRole("option", { name: new RegExp(`Yogurt ${tag} · Marca B`) }).click();
+  await expect(lines.nth(0)).toContainText("al posto di");
+  await expect(dialog.getByLabel("Peso 1 (g)")).toHaveValue("125"); // the old portion doesn't apply to another product
+  await dialog.getByLabel("Peso 2 (g)").fill("50");
+  await dialog.getByRole("button", { name: "Aggiungi 2 voci a colazione" }).click();
+  await expect(dialog).toBeHidden();
+
+  const breakfast = page.getByTestId("meal-colazione");
+  await expect(breakfast.getByTestId("diary-entry")).toHaveCount(2);
+  await expect(breakfast.getByTestId("diary-entry").nth(0)).toContainText("Marca B");
+  await expect(breakfast.getByTestId("diary-entry").nth(1)).toContainText("50 g");
+  // Meal totals: 70 × 1.25 + 370 × 0.5 = 87.5 + 185 = 272.5 kcal; cost 89 + 129 × 50/500 = 89 + 12.9 → 13 = 1.02 €
+  await expect(breakfast.getByTestId("meal-head")).toContainText("273 kcal");
+  await expect(breakfast.getByTestId("meal-head")).toContainText(euro("1,02"));
+  // Protein 5 + 6.5; fibre and salt only known for the oats
+  await expect(breakfast.getByTestId("meal-nutrients")).toContainText("P 11,5 g");
+  await expect(breakfast.getByTestId("meal-nutrients")).toContainText("fibre ≥ 5 g");
+  await expect(breakfast.getByTestId("meal-nutrients")).toContainText("sale ≥ 0,01 g");
+
+  // Dropping an item: repeat again with only the oats
+  await page.getByRole("button", { name: "Ripeti un colazione precedente" }).click();
+  await dialog.getByTestId("past-meal").first().click();
+  await dialog.getByLabel(/Includi Yogurt/).uncheck();
+  await dialog.getByRole("button", { name: "Aggiungi 1 voce a colazione" }).click();
+  await expect(breakfast.getByTestId("diary-entry")).toHaveCount(3);
 });

@@ -222,6 +222,16 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
 - Plausibilità: il sale entra nella somma ≤ 100 g (0 kcal, ma è massa).
 - Test: 382 Vitest, 50 e2e verdi.
 
+## Diario: totali per pasto e "Ripeti" (2026-10-03)
+
+- Ogni pasto mostra kcal e costo, più P, G (saturi), C (zuccheri), fibre e sale, con "≥" se manca qualche dato; i valori ignoti sono omessi.
+- "↻ Ripeti" per pasto: i pasti dello stesso tipo dell'ultimo anno, quelli identici raggruppati ("Uguale in N giorni"; `groupRecentMeals`/`mealKey` in `shared/diary.ts`).
+  - Si sceglie un pasto e, per ogni voce, la si toglie, si cambia prodotto (in cima lo stesso gruppo, cioè le altre marche) o si cambia quantità.
+  - Cambiando prodotto, la porzione decade e restano i grammi.
+  - Salvataggio atomico.
+- API: `GET /api/diary/meals?meal&before&limit`, `POST /api/diary/batch` (massimo 50 voci, tutte valide o nessuna salvata). Nessuna migrazione.
+- e2e: tag casuali (prima un tag poteva essere prefisso di un altro → flaky) e intervalli di date: Diario 1946–1989, Analisi 1902–1934, Statistiche 2000–2019. Suite ×2: 104/104.
+
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Prove reali dell'utente dal telefono:
    - scansione di uno scontrino (revisione, salvataggio, foto nel dettaglio);

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import type { Created, DiaryDay, DiaryEntry, FrequentProduct } from "../../shared/api";
+import type { Created, DiaryDay, DiaryEntry, FrequentProduct, PastMeal, PastMealItem } from "../../shared/api";
 import { addDays, todayRome } from "../../shared/dates";
-import { costCents, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
-import { diaryDayQuery, diaryEntryInput } from "../../shared/schemas";
+import { costCents, groupRecentMeals, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
+import { diaryBatchInput, diaryDayQuery, diaryEntryInput, recentMealsQuery } from "../../shared/schemas";
 import type { AppEnv } from "../app";
 import { HttpError, notFound, parseBody, parseId, parseQuery } from "../http";
 import type { ProductUnit } from "../../shared/types";
@@ -121,6 +121,45 @@ export const diaryRoutes = new Hono<AppEnv>()
       .bind(since)
       .all<FrequentProduct>();
     return c.json(results);
+  })
+  .get("/meals", async (c) => {
+    const { meal, before, limit } = parseQuery(c, recentMealsQuery);
+    // A year back is plenty to find the usual meals; rows capped so a long history stays cheap.
+    const { results } = await c.env.DB.prepare(
+      `select e.date, e.product_id as productId, p.name as productName, p.brand as productBrand, p.unit,
+              p.group_id as groupId, e.amount, e.portion_id as portionId, po.name as portionName, e.portion_qty as portionQty
+         from diary_entries e
+         join products p on p.id = e.product_id
+         left join portions po on po.id = e.portion_id
+        where e.meal = ? and e.date < ? and e.date >= ?
+        order by e.date desc, e.id
+        limit 2000`,
+    )
+      .bind(meal, before, addDays(before, -365))
+      .all<PastMealItem & { date: string }>();
+    const meals: PastMeal[] = groupRecentMeals(results, limit).map((g) => ({
+      dates: g.dates,
+      items: g.items.map(({ date: _d, ...item }) => item),
+    }));
+    return c.json(meals);
+  })
+  .post("/batch", async (c) => {
+    const { entries } = await parseBody(c, diaryBatchInput);
+    // Everything is checked before anything is written: one bad line → 400, nothing saved.
+    const resolved = [];
+    for (const input of entries) resolved.push(await resolveEntry(c.env.DB, input));
+    const db = c.env.DB;
+    const results = await db.batch<{ id: number }>(
+      resolved.map((e) =>
+        db
+          .prepare(
+            `insert into diary_entries (date, meal, product_id, amount, portion_id, portion_qty)
+             values (?, ?, ?, ?, ?, ?) returning id`,
+          )
+          .bind(e.date, e.meal, e.productId, e.amount, e.portionId, e.portionQty),
+      ),
+    );
+    return c.json({ ids: results.map((r) => r.results[0]!.id) }, 201);
   })
   .post("/", async (c) => {
     const e = await resolveEntry(c.env.DB, await parseBody(c, diaryEntryInput));

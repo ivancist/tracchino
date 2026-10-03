@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { DiaryDay, FrequentProduct, Portion } from "../../shared/api";
+import type { DiaryDay, FrequentProduct, PastMeal, Portion } from "../../shared/api";
 import { addDays, todayRome } from "../../shared/dates";
 import { createTestApi } from "../helpers/api";
 import { resetDb } from "../helpers/db";
@@ -173,5 +173,66 @@ describe("diary", () => {
   it("401 without Access", async () => {
     expect((await api.call("GET", `/api/diary?date=${DAY}`, undefined, { auth: false })).status).toBe(401);
     expect((await api.call("POST", "/api/diary", { date: DAY }, { auth: false })).status).toBe(401);
+  });
+});
+
+describe("repeating past meals", () => {
+  const entry = (date: string, meal: string, productId: number, amount: number) => ({ date, meal, productId, amount });
+
+  it("lists past meals of the same kind before the day, identical ones merged", async () => {
+    // The usual breakfast on 3 days (different entry order once), a different one on 09-29, a lunch, and one after the day
+    const rows = [
+      entry("2026-09-30", "colazione", banana, 120), entry("2026-09-30", "colazione", pasta, 80),
+      entry("2026-09-29", "colazione", banana, 240),
+      entry("2026-09-28", "colazione", pasta, 80), entry("2026-09-28", "colazione", banana, 120),
+      entry("2026-09-27", "colazione", banana, 120), entry("2026-09-27", "colazione", pasta, 80),
+      entry("2026-09-30", "pranzo", olio, 10),
+      entry("2026-10-01", "colazione", olio, 5), // the day itself: not "before"
+    ];
+    for (const r of rows) expect((await api.post("/api/diary", r)).status).toBe(201);
+    const pid = (await api.post<{ id: number }>(`/api/products/${banana}/portions`, { name: "1 banana", amount: 120 })).body.id;
+    await api.post("/api/diary", { date: "2026-08-01", meal: "colazione", productId: banana, portionId: pid, portionQty: 1 });
+
+    const { status, body } = await api.get<PastMeal[]>(`/api/diary/meals?meal=colazione&before=${DAY}`);
+    expect(status).toBe(200);
+    expect(body.map((m) => m.dates)).toEqual([["2026-09-30", "2026-09-28", "2026-09-27"], ["2026-09-29"], ["2026-08-01"]]);
+    expect(body[0]!.items.map((i) => [i.productName, i.amount])).toEqual([["Banane", 120], ["Spaghetti", 80]]);
+    expect(body[2]!.items[0]).toMatchObject({ portionId: pid, portionName: "1 banana", portionQty: 1, amount: 120, unit: "g" });
+    expect((await api.get<PastMeal[]>(`/api/diary/meals?meal=colazione&before=${DAY}&limit=1`)).body).toHaveLength(1);
+    expect((await api.get<PastMeal[]>(`/api/diary/meals?meal=snack&before=${DAY}`)).body).toEqual([]);
+  });
+
+  it("adds several entries at once", async () => {
+    const pid = (await api.post<{ id: number }>(`/api/products/${banana}/portions`, { name: "1 banana", amount: 120 })).body.id;
+    const res = await api.post<{ ids: number[] }>("/api/diary/batch", {
+      entries: [
+        { date: DAY, meal: "colazione", productId: pasta, amount: 80 },
+        { date: DAY, meal: "colazione", productId: banana, portionId: pid, portionQty: 2 },
+      ],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.ids).toHaveLength(2);
+    expect((await day()).entries.map((e) => [e.productName, e.amount])).toEqual([["Spaghetti", 80], ["Banane", 240]]);
+  });
+
+  it("all or nothing: one invalid entry saves none", async () => {
+    const other = (await api.post<{ id: number }>(`/api/products/${pasta}/portions`, { name: "1 piatto", amount: 90 })).body.id;
+    const res = await api.post("/api/diary/batch", {
+      entries: [
+        { date: DAY, meal: "pranzo", productId: pasta, amount: 80 },
+        { date: DAY, meal: "pranzo", productId: banana, portionId: other, portionQty: 1 }, // portion of another product
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect((await day()).entries).toEqual([]);
+    expect((await api.post("/api/diary/batch", { entries: [] })).status).toBe(400);
+    expect((await api.post("/api/diary/batch", { entries: [{ date: DAY, meal: "pranzo", productId: pasta }] })).status).toBe(400);
+    expect((await api.get(`/api/diary/meals?meal=merenda&before=${DAY}`)).status).toBe(400);
+    expect((await api.get(`/api/diary/meals?meal=pranzo`)).status).toBe(400);
+  });
+
+  it("401 without Access", async () => {
+    expect((await api.call("GET", `/api/diary/meals?meal=pranzo&before=${DAY}`, undefined, { auth: false })).status).toBe(401);
+    expect((await api.call("POST", "/api/diary/batch", { entries: [] }, { auth: false })).status).toBe(401);
   });
 });

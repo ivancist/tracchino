@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import type { DiaryEntry } from "../../shared/api";
 import { addDays, formatIsoDate, isValidIsoDate, todayRome } from "../../shared/dates";
-import { COST_WINDOWS, MEAL_LABELS, MEALS, sumKnown, type CostMode, type Meal, type Total } from "../../shared/diary";
+import { COST_WINDOWS, MEAL_LABELS, MEALS, sumKnown, sumNutrients, type CostMode, type Meal, type Nutrient, type Total } from "../../shared/diary";
 import { formatCents } from "../../shared/money";
 import { formatAmount } from "../../shared/quantity";
 import { DiaryEntryForm } from "../components/DiaryEntryForm";
+import { RepeatMealForm } from "../components/RepeatMealForm";
 import { Dialog, PageHeader, QueryState } from "../components/ui";
 import { costLabel, saveCost, storedCost, type CostPref } from "../costPreference";
 import { formatNumber } from "../format";
@@ -34,6 +35,22 @@ function Tile({ label, total, format, testId }: { label: string; total: Total; f
 
 const grams = (v: number) => `${formatNumber(v)} g`;
 
+/** "P 12 g · G 3 g (saturi 0,5 g) · C 60 g (zuccheri 5 g) · fibre 4 g · sale 0,05 g": unknown values left out. */
+function mealNutrients(t: Record<Nutrient, Total>): string {
+  const g = (n: Nutrient, digits = 1) => (t[n].value == null ? null : `${t[n].missing ? "≥ " : ""}${formatNumber(t[n].value!, digits)} g`);
+  const part = (label: string, main: string | null, subLabel?: string, sub?: string | null) =>
+    main == null ? null : `${label} ${main}${sub ? ` (${subLabel} ${sub})` : ""}`;
+  return [
+    part("P", g("protein")),
+    part("G", g("fat"), "saturi", g("saturatedFat")),
+    part("C", g("carbs"), "zuccheri", g("sugars")),
+    part("fibre", g("fiber")),
+    part("sale", g("salt", 2)),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function entryQuantity(e: DiaryEntry): string {
   const unit = e.unit === "ml" ? "ml" : "g";
   const amount = formatAmount(e.amount, unit);
@@ -51,6 +68,7 @@ export function DiaryPage() {
   useProducts();
   useFrequentProducts();
   const [editing, setEditing] = useState<{ meal: Meal; entry?: DiaryEntry } | null>(null);
+  const [repeating, setRepeating] = useState<Meal | null>(null);
 
   const goTo = (d: string) => setParams(d === today ? {} : { data: d });
   function changeCost(patch: Partial<CostPref>) {
@@ -114,13 +132,24 @@ export function DiaryPage() {
 
           {MEALS.map((meal) => {
             const entries = d.entries.filter((e) => e.meal === meal);
-            const kcal = sumKnown(entries.map((e) => e.nutrients.kcal));
+            const totals = sumNutrients(entries.map((e) => e.nutrients));
+            const mealCost = sumKnown(entries.map((e) => e.costCents));
+            const nutrients = mealNutrients(totals);
             return (
               <section key={meal} className="day" aria-labelledby={`meal-${meal}`} data-testid={`meal-${meal}`}>
                 <h2 className="day-title" id={`meal-${meal}`}>
                   <span>{MEAL_LABELS[meal]}</span>
-                  {entries.length > 0 && <span>{totalText(kcal, (v) => `${formatNumber(v, 0)} kcal`)}</span>}
+                  {entries.length > 0 && (
+                    <span data-testid="meal-head">
+                      {totalText(totals.kcal, (v) => `${formatNumber(v, 0)} kcal`)} · {totalText(mealCost, formatCents)}
+                    </span>
+                  )}
                 </h2>
+                {entries.length > 0 && nutrients && (
+                  <p className="muted small meal-nutrients" data-testid="meal-nutrients">
+                    {nutrients}
+                  </p>
+                )}
                 {entries.length > 0 && (
                   <ul className="list">
                     {entries.map((e) => (
@@ -143,9 +172,19 @@ export function DiaryPage() {
                     ))}
                   </ul>
                 )}
-                <button type="button" className="link small add-entry" onClick={() => setEditing({ meal })}>
-                  + Aggiungi a {MEAL_LABELS[meal].toLowerCase()}
-                </button>
+                <div className="meal-actions">
+                  <button type="button" className="link small add-entry" onClick={() => setEditing({ meal })}>
+                    + Aggiungi a {MEAL_LABELS[meal].toLowerCase()}
+                  </button>
+                  <button
+                    type="button"
+                    className="link small add-entry"
+                    aria-label={`Ripeti un ${MEAL_LABELS[meal].toLowerCase()} precedente`}
+                    onClick={() => setRepeating(meal)}
+                  >
+                    ↻ Ripeti
+                  </button>
+                </div>
               </section>
             );
           })}
@@ -183,6 +222,13 @@ export function DiaryPage() {
         )}
       </details>
 
+      <Dialog
+        open={repeating != null}
+        title={`Ripeti ${repeating ? MEAL_LABELS[repeating].toLowerCase() : ""}`}
+        onClose={() => setRepeating(null)}
+      >
+        {repeating && <RepeatMealForm key={`${date}-${repeating}`} date={date} meal={repeating} onDone={() => setRepeating(null)} />}
+      </Dialog>
       <Dialog
         open={editing != null}
         title={editing?.entry ? "Modifica voce" : `Aggiungi a ${editing ? MEAL_LABELS[editing.meal].toLowerCase() : ""}`}
