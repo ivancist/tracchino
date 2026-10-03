@@ -105,9 +105,9 @@ Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confe
 - Smoke test senza login: `/`, `/api/me`, `/api/receipts`, `/api/receipts/1/photo`, `POST /api/receipts/scan` → 302 verso Access.
 
 ### Ancora aperto
-1. Prova reale dal telefono da parte dell'utente: scansione → revisione → salvataggio → foto nel dettaglio.
+1. ~~Prova reale dal telefono~~: fatta dall'utente (2026-10-03).
 2. Più scontrini per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X"); poi eventuale taratura della risoluzione.
-2. Workers AI come riserva: rimandato (PLAN §5).
+3. Workers AI come riserva: rimandato (PLAN §5).
 
 ## Fase 4: fatto (branch `phase-4-nutrition`)
 
