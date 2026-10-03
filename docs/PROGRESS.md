@@ -1,7 +1,22 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (Fase 6)
+Ultimo aggiornamento: 2026-10-03 (dopo la correzione del peso delle porzioni)
+
+## Riprendere da qui
+
+- **Produzione = `main` = `ca936b8`** (versione Worker `fa2ffa82`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- Migrazioni applicate in produzione: `0000`…`0004` (ultime: `0003_fiber_saturated`, `0004_salt`). Backup pre-migrazione in `backups/` (gitignored).
+- Tutte le fasi 0–6 del piano sono online. Aggiunte successive, richieste dall'utente e online:
+  - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
+  - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
+  - porzioni: una voce salvata conserva il peso della porzione di allora.
+- Ancora aperto (dettagli in fondo):
+  - prove reali dell'utente dall'iPhone (scansione scontrino; barcode con zxing);
+  - più scontrini per l'eval;
+  - Workers AI rimandato;
+  - bundle > 500 kB (facoltativo).
+- e2e: ogni spec usa date e tag propri (Statistiche 2000–2019, Diario 1946–1989, Analisi 1902–1934, tag casuali). I nuovi spec che scrivono dati devono fare lo stesso.
 
 ## Fasi
 
