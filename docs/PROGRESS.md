@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (dopo la correzione del peso delle porzioni)
+Ultimo aggiornamento: 2026-10-03 (righe uguali unite nella scansione)
 
 ## Riprendere da qui
 
@@ -249,6 +249,20 @@ Ultimo aggiornamento: 2026-10-03 (dopo la correzione del peso delle porzioni)
   - Modificando una voce passata con la stessa porzione si usa il peso di allora (`savedPortionGrams`: 2 vasetti = 2 × il vecchio peso); un'altra porzione o un altro prodotto → peso attuale. Il form lo segnala.
 - API: `GET /api/diary/meals?meal&before&limit`, `POST /api/diary/batch` (massimo 50 voci, tutte valide o nessuna salvata). Nessuna migrazione.
 - e2e: tag casuali (prima un tag poteva essere prefisso di un altro → flaky) e intervalli di date: Diario 1946–1989, Analisi 1902–1934, Statistiche 2000–2019. Suite ×2: 104/104.
+
+## Scansione: righe uguali unite e righe di quantità (2026-10-03)
+
+Segnalazione dell'utente sullo scontrino `eurospin-1`: passata e ceci comparivano due volte; "2 PZ x 1,99" finiva sul tonno (1,19) invece che sullo sgombro (3,98).
+- `worker/services/scan-lines.ts`:
+  - `attachQuantityLines`: il modello trascrive la riga di quantità come voce a sé (`kind: "quantity"`, `unitPriceCents`), il Worker la aggancia al prodotto sotto, poi a quello sopra, solo se il conto torna;
+  - `fixPieces`: pezzi con prezzo unitario che non torna → spostati sulla riga vicina che torna, oppure scartati; poi `piecesHint`;
+  - `mergeDuplicateLines`: stessa chiave `normalizeRawText` → una riga sola (importi, sconti e pezzi sommati).
+- Causa trovata con l'output grezzo: il modello leggeva "2 PZ x" come seguito del tonno e da lì **spostava di una riga tutti i prezzi successivi** (eval: prezzi 51%). Chiedere nel prompt di "verificare il conto" non bastava; trascrivere la riga a parte sì.
+- Eval: i pezzi in più ora contano come errore (prima no), metrica `merged` (righe unite uguali alla verità unita), output grezzo e negozio letto salvati nel risultato.
+  - Risultato `gemini-3.5-flash-lite`: 100% su prezzi, pezzi, righe unite, prodotti, alias e totale; eurospin ripetuto 3 volte, sempre 100%.
+  - In una run la P.IVA di rossotono è stata letta male (catena 50%); in 3 ripetizioni sempre giusta: variabilità del modello.
+- Test: `test/services/scan-lines.test.ts` (13), caso Eurospin in `test/routes/scan.test.ts`. Mutazioni (aggancio senza conto, nessuna unione) rilevate.
+- Scala `verify` verde: 405 test, 52 e2e, build, segreti, config, migrazioni. Nessuna migrazione.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Prove reali dell'utente dal telefono:

@@ -212,6 +212,10 @@ Il tuo consumo: 3 scontrini al giorno × 2 chiamate = circa 6 richieste al giorn
 
 **Decisione (2026-10-03)**: Workers AI come riserva è **rimandato**. Gemini Flash-Lite ha estratto e abbinato al 100% i primi scontrini reali, il client riprova una volta su 500/503 e la quota è circa 80 volte l'uso previsto. L'interfaccia `ReceiptAi` resta pronta: la riserva si aggiunge se compaiono indisponibilità ripetute o problemi di quota.
 
+**Decisione (2026-10-03, segnalazione dell'utente sullo scontrino Eurospin)**:
+- Le righe con la stessa descrizione normalizzata, consecutive o no, diventano **una sola riga** in revisione: importi e sconti sommati, pezzi sommati (una riga senza pezzi vale 1: "CECI 400g" × 2 → 2 pezzi; "UOVA 6P" × 2 → 12). Le righe pesate si uniscono solo con righe pesate (grammi sommati).
+- Una riga di quantità ("2 PZ x 1,99 EUR/PZ") è stampata **sopra** il suo prodotto. Il modello la trascrive come riga a sé (`kind: "quantity"`) e il Worker la aggancia al prodotto sotto (o, in mancanza, a quello sopra) solo se pezzi × prezzo unitario = importo; altrimenti la scarta.
+
 **Da verificare in Fase 3**: limiti effettivi del free tier in AI Studio per l'account e la regione (Italia), e un confronto di qualità tra i due provider su 5–10 scontrini reali di negozi diversi.
 
 ### Foto dello scontrino — compressa e salvata su R2

@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import type { ScanLine, ScanResult } from "../../shared/api";
 import { todayRome } from "../../shared/dates";
-import { piecesHint } from "../../shared/receipt-text";
 import type { AppEnv } from "../app";
 import { HttpError, parseImage } from "../http";
 import { AiError, type ProductChoice, type ReceiptAi } from "../services/ai/types";
+import { mergeDuplicateLines, prepareLines } from "../services/scan-lines";
 import { decide, findCandidates, matchStore, type Alias, type CatalogProduct, type CatalogStore } from "../services/matching";
 
 /** Safety cap, far below the free tier (a few receipts a day; each scan = 1–2 model calls). */
@@ -71,7 +71,8 @@ export function createScanRoutes(aiFactory: AiFactory) {
     const catalog = await loadCatalog(c.env.DB);
     const store = matchStore(extracted.store, catalog.stores);
     const chain = catalog.stores.find((s) => s.chainId === store.chainId);
-    const found = extracted.lines.map((l) => findCandidates(l.rawText, store.chainId, catalog.products, catalog.aliases));
+    const extractedLines = mergeDuplicateLines(prepareLines(extracted.lines));
+    const found = extractedLines.map((l) => findCandidates(l.rawText, store.chainId, catalog.products, catalog.aliases));
 
     // Second pass (text only) for every line that is not a known alias.
     const pending = found.flatMap((f, index) =>
@@ -99,14 +100,14 @@ export function createScanRoutes(aiFactory: AiFactory) {
       }
     }
 
-    const lines: ScanLine[] = extracted.lines.map((l, index) => {
+    const lines: ScanLine[] = extractedLines.map((l, index) => {
       const match = decide(found[index]!, aiMatching ? choices.find((ch) => ch.index === index) : undefined);
       return {
         rawText: l.rawText,
         rawTextNorm: match.rawTextNorm,
         priceCents: l.priceCents,
         discountCents: Math.min(l.discountCents, l.priceCents),
-        pieces: l.pieces ?? piecesHint(l.rawText),
+        pieces: l.pieces,
         amount: l.amountGrams,
         productId: match.productId,
         status: match.status,

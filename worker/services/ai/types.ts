@@ -6,10 +6,14 @@ import { isValidIsoDate } from "../../../shared/dates";
 const cents = z.number().int().min(0).max(100_000_00);
 
 export const extractedLine = z.object({
+  /** "quantity": a printed "2 PZ x 1,99 EUR/PZ" row, attached to its product by the Worker (`attachQuantityLines`). */
+  kind: z.enum(["product", "quantity"]).nullish().transform((v) => v ?? "product"),
   rawText: z.string().trim().min(1).max(120),
   priceCents: cents,
   discountCents: cents.nullish().transform((v) => v ?? 0),
   pieces: z.number().int().positive().max(999).nullish().transform((v) => v ?? null),
+  /** Price per piece printed on a quantity line ("2 PZ x 1,99 EUR/PZ" → 199): lets the Worker check whose pieces they are. */
+  unitPriceCents: cents.nullish().transform((v) => v || null),
   amountGrams: z.number().int().positive().max(100_000).nullish().transform((v) => v ?? null),
 });
 

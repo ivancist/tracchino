@@ -20,15 +20,19 @@ Leggi lo scontrino nella foto e restituisci SOLO dati stampati sullo scontrino, 
 - store.name: insegna del negozio (es. "Esselunga", "Coop", "Lidl"); store.address: indirizzo; store.vatNumber: partita IVA (solo cifre). null se non leggibili.
 - date: data dello scontrino in formato AAAA-MM-GG. Sugli scontrini italiani è GG/MM/AA o GG/MM/AAAA: "29/09/26" → "2026-09-29". null se non leggibile.
 - totalCents: totale pagato (riga "TOTALE" / "TOTALE COMPLESSIVO"), in centesimi di euro.
-- lines: una voce per ogni prodotto acquistato, nell'ordine dello scontrino:
+- lines: una voce per ogni prodotto acquistato e per ogni riga di quantità, nell'ordine dello scontrino:
   - rawText: la descrizione copiata carattere per carattere come stampata, abbreviazioni e spazi compresi. Non correggere e non
     completare le parole tronche ("500m" resta "500m", "POMOD." resta "POMOD."). SENZA prezzo, SENZA aliquota/codice IVA o
     reparto finale e SENZA simboli iniziali che non fanno parte della descrizione (es. "*" che segnala una promozione).
-  - priceCents: importo della riga in centesimi (prezzo pieno, prima degli sconti). Per "2 X 1,29" l'importo è 258.
+  - priceCents: importo stampato sulla riga, in centesimi (prezzo pieno, prima degli sconti).
   - discountCents: se subito dopo il prodotto c'è una riga di sconto (SCONTO, PROMO, OFFERTA, importo negativo come "-0,50"), metti qui l'importo POSITIVO dello sconto e NON creare una voce separata. Altrimenti 0.
-  - pieces: numero di pezzi solo se stampato (es. "2 X 1,29" → 2, "UOVA 6P" → 6). Una riga di quantità sopra o sotto il
-    prodotto (es. "2 PZ x 1,99 EUR/PZ") NON è una voce separata: vale pieces = 2 per quel prodotto, con priceCents = importo totale.
-    Altrimenti null.
+  - kind: "product" per un prodotto. "quantity" per una riga di quantità senza descrizione del prodotto (es. "2 PZ x 1,99 EUR/PZ",
+    "3 X 0,89"): trascrivila come voce a sé, nella sua posizione, con rawText = il testo della riga, priceCents = 0,
+    pieces = numero di pezzi, unitPriceCents = prezzo unitario. Non spostare gli importi: ogni importo resta alla riga su cui
+    è stampato (la riga di quantità di solito non ha importo).
+  - pieces: per un prodotto, numero di pezzi solo se stampato nella sua riga (es. "UOVA 6P" → 6, "YOGURT 2 X 0,79" → 2). Altrimenti null.
+  - unitPriceCents: solo per le righe di quantità ("1,99 EUR/PZ" → 199). Altrimenti null.
+  - Ogni riga stampata è una voce, anche se uguale a un'altra (due "CECI 400g" = due voci).
   - amountGrams: peso solo se stampato (es. "0,856 kg x 1,99 €/kg" → 856). Altrimenti null.
 - Escludi righe che non sono prodotti: subtotali, totale, IVA, pagamento, resto, punti fedeltà, buoni.
 - Gli importi sono interi in centesimi: "1,79" → 179.`;
@@ -52,13 +56,15 @@ const RECEIPT_SCHEMA = {
       items: {
         type: "object",
         properties: {
+          kind: { type: "string", enum: ["product", "quantity"] },
           rawText: { type: "string" },
           priceCents: { type: "integer" },
           discountCents: { type: "integer" },
           pieces: { type: "integer", nullable: true },
+          unitPriceCents: { type: "integer", nullable: true },
           amountGrams: { type: "integer", nullable: true },
         },
-        required: ["rawText", "priceCents", "discountCents", "pieces", "amountGrams"],
+        required: ["kind", "rawText", "priceCents", "discountCents", "pieces", "unitPriceCents", "amountGrams"],
       },
     },
   },

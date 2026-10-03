@@ -57,10 +57,12 @@ const receipt = (lines: ExtractedReceipt["lines"], store: Partial<ExtractedRecei
   lines,
 });
 const line = (rawText: string, priceCents: number, extra: Partial<ExtractedReceipt["lines"][number]> = {}) => ({
+  kind: "product" as const,
   rawText,
   priceCents,
   discountCents: 0,
   pieces: null,
+  unitPriceCents: null,
   amountGrams: null,
   ...extra,
 });
@@ -93,6 +95,33 @@ describe("POST /api/receipts/scan", () => {
     expect(scan.scansLeft).toBe(SCAN_DAILY_LIMIT - 1);
     // Scanning stores nothing: the photo is uploaded only when the reviewed receipt is saved
     expect((await env.RECEIPT_PHOTOS.list()).objects).toHaveLength(0);
+  });
+
+  it("merges repeated lines and gives a quantity line to the product whose amount it explains", async () => {
+    // Eurospin, 29/09/2026: "2 PZ x 1,99 EUR/PZ" is printed above SGOMBRI (3,98), but the model put it on the tuna above.
+    const { ai, calls } = fakeAi(
+      receipt([
+        line("PASSATA POMOD. 700", 85),
+        line("CECI 400g", 49),
+        line("CECI 400g", 49),
+        line("PASSATA POMOD. 700", 85),
+        line("TONNO NATURALE 160", 119),
+        line("TONNO NATURALE 160", 119),
+        line("2 PZ x 1,99 EUR/PZ", 0, { kind: "quantity", pieces: 2, unitPriceCents: 199 }),
+        line("SGOMBRI GR.NAT.120", 398),
+        line("UOVA A TERRA XL 6P", 199),
+      ]),
+    );
+    const scan = (await (await (await appWith(ai))("/api/receipts/scan", JPEG, "image/jpeg")).res.json()) as ScanResult;
+    expect(scan.lines.map((l) => [l.rawText, l.priceCents, l.pieces])).toEqual([
+      ["PASSATA POMOD. 700", 170, 2],
+      ["CECI 400g", 98, 2],
+      ["TONNO NATURALE 160", 238, 2],
+      ["SGOMBRI GR.NAT.120", 398, 2],
+      ["UOVA A TERRA XL 6P", 199, 6],
+    ]);
+    expect(scan.lines.reduce((s, l) => s + l.priceCents, 0)).toBe(scan.totalCents);
+    expect(calls.choose[0]!.lines.map((l) => l.index)).toEqual([0, 1, 2, 3, 4]);
   });
 
   it("learns aliases on save: the second scan matches automatically, without asking the AI", async () => {

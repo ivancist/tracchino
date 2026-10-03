@@ -16,6 +16,7 @@ import type { compressReceiptPhoto as Compress } from "../src/image";
 import { normalizeRawText } from "../shared/receipt-text";
 import { normalizeText, trigramSimilarity } from "../shared/text";
 import { createGemini } from "../worker/services/ai/gemini";
+import { mergeDuplicateLines, prepareLines } from "../worker/services/scan-lines";
 import type { ExtractedReceipt, ProductChoice } from "../worker/services/ai/types";
 import { decide, findCandidates, matchStore, type Alias, type CatalogProduct, type CatalogStore } from "../worker/services/matching";
 
@@ -158,7 +159,9 @@ async function main() {
     process.stdout.write(`${id} (${Math.round(image.data.byteLength / 1024)} KB ${image.mimeType}) … `);
 
     const t0 = performance.now();
-    const got = await ai.extract(image);
+    const raw = await ai.extract(image);
+    // Same post-processing as POST /api/receipts/scan; lines are compared before merging, merging is checked apart.
+    const got = { ...raw, lines: prepareLines(raw.lines) };
     const extractMs = Math.round(performance.now() - t0);
     let aiCalls = 1;
 
@@ -199,7 +202,7 @@ async function main() {
         got: ext.rawText,
         priceOk: ext.priceCents === exp.price_cents,
         discountOk: ext.discountCents === exp.discount_cents,
-        piecesOk: exp.pieces == null || ext.pieces === exp.pieces,
+        piecesOk: ext.pieces === (exp.pieces ?? null),
         candidateRecall: found[g]!.candidates.some((c) => c.productId === want),
         aiPick: aiMatch ? (choices.find((c) => c.index === g)?.productId ?? null) === want : null,
         finalOk: d.productId === want,
@@ -208,6 +211,11 @@ async function main() {
       };
     });
     const n = expected.lines.length;
+    const mergedKey = (l: { rawText: string; priceCents: number; pieces: number | null }) => `${normalizeRawText(l.rawText)}|${l.priceCents}|${l.pieces}`;
+    const mergedGot = mergeDuplicateLines(got.lines).map(mergedKey);
+    const mergedWant = mergeDuplicateLines(
+      expected.lines.map((l) => ({ rawText: l.raw_text, priceCents: l.price_cents, discountCents: l.discount_cents, kind: "product" as const, pieces: l.pieces ?? null, unitPriceCents: null, amountGrams: null })),
+    ).map(mergedKey);
     const count = (f: (l: (typeof lines)[number]) => boolean) => lines.filter(f).length;
     const sum = got.lines.reduce((s, l) => s + l.priceCents - l.discountCents, 0);
     const r = {
@@ -216,10 +224,14 @@ async function main() {
       chainOk,
       storeBy: store.status,
       vatOk: got.store.vatNumber === expected.vat_number,
+      store: got.store,
       dateOk: got.date === expected.date,
       date: { expected: expected.date, got: got.date },
       totalOk: got.totalCents === expected.total_cents,
       sumCheck: got.totalCents != null && sum === got.totalCents,
+      /** Review screen lines (repeated items merged): same text, amount and pieces as the merged ground truth, in order. */
+      mergedOk: mergedGot.join("\n") === mergedWant.join("\n"),
+      mergedLines: { expected: mergedWant.length, got: mergedGot.length },
       lines: { expected: n, extracted: got.lines.length, matched: pairs.length },
       recall: pct(pairs.length, n),
       precision: pct(pairs.length, got.lines.length),
@@ -236,9 +248,10 @@ async function main() {
       aiCalls,
       mismatches: lines.filter((l) => !l.priceOk || !l.finalOk || !l.aliasOk || !l.piecesOk),
       unmatchedExpected: expected.lines.filter((_, i) => !pairs.some((p) => p.e === i)).map((l) => `${l.raw_text} ${l.price_cents}`),
+      extracted: raw.lines.map((l) => `${l.kind} ${l.rawText} | ${l.priceCents} | pz ${l.pieces ?? "-"} × ${l.unitPriceCents ?? "-"}`),
       unmatchedExtracted: got.lines.filter((_, i) => !pairs.some((p) => p.g === i)).map((l) => `${l.rawText} ${l.priceCents}`),
     };
-    console.log(`recall ${r.recall}% · prezzi ${r.priceExact}% · prodotti ${r.productOk}% · ${extractMs + matchMs} ms`);
+    console.log(`recall ${r.recall}% · prezzi ${r.priceExact}% · pezzi ${r.piecesOk}% · unite ${r.mergedOk ? "ok" : "✗"} · prodotti ${r.productOk}% · ${extractMs + matchMs} ms`);
     return r;
   }
 
@@ -252,6 +265,7 @@ async function main() {
     date: pct(receipts.filter((r) => r.dateOk).length, receipts.length),
     total: pct(receipts.filter((r) => r.totalOk).length, receipts.length),
     sumCheck: pct(receipts.filter((r) => r.sumCheck).length, receipts.length),
+    merged: pct(receipts.filter((r) => r.mergedOk).length, receipts.length),
     recall: weighted("recall"),
     precision: pct(
       receipts.reduce((s, r) => s + r.lines.matched, 0),
