@@ -3,6 +3,8 @@ import type {
   Chain,
   Created,
   DiaryDay,
+  DietAnalysis,
+  SimulationResult,
   FrequentProduct,
   Portion,
   LastPrice,
@@ -117,11 +119,16 @@ export const useDeleteReceipt = () => useWrite((id: number) => api.del(`/api/rec
 const period = (from?: string, to?: string) =>
   new URLSearchParams(Object.entries({ from, to }).filter((e): e is [string, string] => !!e[1])).toString();
 
-export const useSpending = (from?: string, to?: string) =>
-  useQuery({ queryKey: ["stats", "spending", from, to], queryFn: () => api.get<SpendingStats>(`/api/stats/spending?${period(from, to)}`) });
-
-export const useTopProducts = (from?: string, to?: string) =>
+export const useSpending = (from?: string, to?: string, enabled = true) =>
   useQuery({
+    queryKey: ["stats", "spending", from, to],
+    queryFn: () => api.get<SpendingStats>(`/api/stats/spending?${period(from, to)}`),
+    enabled,
+  });
+
+export const useTopProducts = (from?: string, to?: string, enabled = true) =>
+  useQuery({
+    enabled,
     queryKey: ["stats", "top", from, to],
     queryFn: () => api.get<TopProduct[]>(`/api/stats/top-products?limit=10&${period(from, to)}`),
   });
@@ -138,6 +145,32 @@ export const useDiaryDay = (date: string, costMode: CostMode, windowDays: number
     queryKey: ["diary", "day", date, costMode, windowDays],
     queryFn: () => api.get<DiaryDay>(`/api/diary?date=${date}&costMode=${costMode}&windowDays=${windowDays}`),
   });
+const costParams = (mode: CostMode, windowDays: number) => `costMode=${mode}&windowDays=${windowDays}`;
+
+export const useDietAnalysis = (from: string | undefined, to: string | undefined, mode: CostMode, windowDays: number) =>
+  useQuery({
+    queryKey: ["diary", "analysis", from, to, mode, windowDays],
+    queryFn: () => api.get<DietAnalysis>(`/api/analysis?${period(from, to)}&${costParams(mode, windowDays)}`),
+  });
+
+export type SimulationParams = { fromProduct: number; toProduct: number; factor: number };
+export const useSimulation = (
+  from: string | undefined,
+  to: string | undefined,
+  mode: CostMode,
+  windowDays: number,
+  params: SimulationParams | null,
+) =>
+  useQuery({
+    queryKey: ["diary", "simulate", from, to, mode, windowDays, params],
+    queryFn: () =>
+      api.get<SimulationResult>(
+        `/api/analysis/simulate?${period(from, to)}&${costParams(mode, windowDays)}` +
+          `&fromProduct=${params!.fromProduct}&toProduct=${params!.toProduct}&factor=${params!.factor}`,
+      ),
+    enabled: params != null,
+  });
+
 export const useFrequentProducts = () =>
   useQuery({ queryKey: ["diary", "frequent"], queryFn: () => api.get<FrequentProduct[]>("/api/diary/frequent") });
 

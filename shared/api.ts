@@ -167,6 +167,26 @@ export type DiaryDay = {
 /** Products eaten recently, most used first: the diary's autocomplete puts them on top. */
 export type FrequentProduct = { productId: number; uses: number; lastDate: string };
 
+export type ProductAnalysis = import("./analysis").ConsumptionRow & {
+  name: string;
+  brand: string | null;
+  unit: ProductUnit;
+  /** Cost of 100 kcal / 10 g of protein, at the end of the period. */
+  per100KcalCents: number | null;
+  per10gProteinCents: number | null;
+  costEstimated: boolean;
+};
+
+export type DietAnalysis = {
+  from: string;
+  to: string;
+  firstDiaryDate: string | null;
+  summary: import("./analysis").DietSummary;
+  products: ProductAnalysis[];
+};
+
+export type SimulationResult = import("./analysis").Simulation & { from: string; to: string; loggedDays: number };
+
 export type MatchStatus = "alias" | "proposed" | "uncertain" | "none";
 
 export type ScanLine = {

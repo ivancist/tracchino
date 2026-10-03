@@ -9,6 +9,14 @@ export function formatNumber(value: number, digits = 1): string {
   return f.format(value);
 }
 
+const SMALL_EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+
+/** A derived amount in (possibly fractional) cents: 3 decimals below 10 cents ("0,004 €"), else to the cent. */
+export function formatDerivedCents(cents: number): string {
+  return Math.abs(cents) < 10 ? SMALL_EUR.format(cents / 100) : EUR.format(Math.round(cents) / 100);
+}
+
 /** Decimal typed with a comma or a dot; empty or invalid → null. */
 export function parseDecimalInput(s: string): number | null {
   const t = s.trim().replace(",", ".");

@@ -2,40 +2,14 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import type { DiaryEntry } from "../../shared/api";
 import { addDays, formatIsoDate, isValidIsoDate, todayRome } from "../../shared/dates";
-import {
-  COST_MODES,
-  COST_WINDOW_DAYS,
-  COST_WINDOWS,
-  MEAL_LABELS,
-  MEALS,
-  sumKnown,
-  type CostMode,
-  type Meal,
-  type Total,
-} from "../../shared/diary";
+import { COST_WINDOWS, MEAL_LABELS, MEALS, sumKnown, type CostMode, type Meal, type Total } from "../../shared/diary";
 import { formatCents } from "../../shared/money";
 import { formatAmount } from "../../shared/quantity";
 import { DiaryEntryForm } from "../components/DiaryEntryForm";
 import { Dialog, PageHeader, QueryState } from "../components/ui";
+import { costLabel, saveCost, storedCost, type CostPref } from "../costPreference";
 import { formatNumber } from "../format";
 import { useDiaryDay, useFrequentProducts, useProducts } from "../queries";
-
-const COST_KEY = "tracchino.diary.cost";
-type CostPref = { mode: CostMode; windowDays: number };
-const DEFAULT_COST: CostPref = { mode: "average", windowDays: COST_WINDOW_DAYS };
-const costLabel = (p: CostPref) => (p.mode === "average" ? `media degli acquisti degli ultimi ${p.windowDays} giorni` : "ultimo prezzo pagato");
-
-/** Per-device preference; storage can be unavailable (private mode), so it's only a convenience. */
-function storedCost(): CostPref {
-  try {
-    const v = JSON.parse(localStorage.getItem(COST_KEY) ?? "null") as Partial<CostPref> | null;
-    const mode = COST_MODES.includes(v?.mode as CostMode) ? (v!.mode as CostMode) : DEFAULT_COST.mode;
-    const windowDays = (COST_WINDOWS as readonly number[]).includes(v?.windowDays as number) ? v!.windowDays! : DEFAULT_COST.windowDays;
-    return { mode, windowDays };
-  } catch {
-    return DEFAULT_COST;
-  }
-}
 
 /** "1.234 kcal", or "n.d." when nothing is known; "≥" when some entries lack the value. */
 function totalText(t: Total, format: (v: number) => string): string {
@@ -82,11 +56,7 @@ export function DiaryPage() {
   function changeCost(patch: Partial<CostPref>) {
     const next = { ...cost, ...patch };
     setCost(next);
-    try {
-      localStorage.setItem(COST_KEY, JSON.stringify(next));
-    } catch {
-      // not persisted: fine
-    }
+    saveCost(next);
   }
 
   const d = day.data;

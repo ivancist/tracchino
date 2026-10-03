@@ -1,13 +1,25 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
-import { addDays, todayRome } from "../shared/dates";
+import { addDays } from "../shared/dates";
 
 const euro = (s: string) => new RegExp(`${s}\\s€`);
 
-/** Each run writes on its own past day, so runs and projects never share a diary day. */
+/**
+ * Each run writes on its own day in 1935–1989: never shared between runs/projects, and outside the years other
+ * specs use (stats: 2000–2019, analysis: before 1935).
+ */
 function uniqueDay(project: string, test: 0 | 1): string {
-  const offset = 400 + (Date.now() % 5000) * 4 + (project === "mobile" ? 1 : 0) + test * 2;
-  return addDays(todayRome(), -offset);
+  const offset = (Date.now() % 5000) * 4 + (project === "mobile" ? 1 : 0) + test * 2;
+  return addDays("1989-12-01", -offset);
 }
+
+/** Receipts created by the current test, deleted afterwards (they would show up in spending stats). */
+let receiptIds: number[] = [];
+test.beforeEach(() => {
+  receiptIds = [];
+});
+test.afterEach(async ({ request }) => {
+  for (const id of receiptIds) await request.delete(`/api/receipts/${id}`);
+});
 
 async function seed(request: APIRequestContext, tag: string, day: string) {
   const post = async (path: string, data: unknown) => {
@@ -29,14 +41,14 @@ async function seed(request: APIRequestContext, tag: string, day: string) {
   await post(`/api/products/${banana}/portions`, { name: "1 banana", amount: 120 });
   const chainId = await post("/api/chains", { name: `E2E Diario ${tag}` });
   const storeId = await post("/api/stores", { chainId, name: "Sede" });
-  await post("/api/receipts", {
+  receiptIds.push(await post("/api/receipts", {
     storeId,
     date: addDays(day, -5),
     items: [
       { productId: pasta, priceFullCents: 89, pieces: 1 },
       { productId: banana, priceFullCents: 179, pieces: 6 },
     ],
-  });
+  }));
   return { pasta, banana, olio };
 }
 

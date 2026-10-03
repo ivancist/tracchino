@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { toHttpError } from "./http";
 import { accessAuth, remoteKeySet, sameOriginOnly, type AuthVariables, type KeySetFactory } from "./middleware/auth";
+import { analysisRoutes } from "./routes/analysis";
 import { chainRoutes } from "./routes/chains";
 import { diaryRoutes } from "./routes/diary";
 import { groupRoutes } from "./routes/groups";
@@ -35,6 +36,7 @@ export function createApp(options: { keySet?: KeySetFactory; ai?: AiFactory; off
   app.route("/products", productPortionRoutes);
   app.route("/portions", portionRoutes);
   app.route("/diary", diaryRoutes);
+  app.route("/analysis", analysisRoutes);
   app.route("/receipts/scan", createScanRoutes(options.ai ?? geminiFromEnv));
   app.route("/receipts", receiptRoutes);
   app.route("/stats", statsRoutes);

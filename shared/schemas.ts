@@ -156,4 +156,21 @@ export const periodQuery = z
   .object({ from: isoDate.optional(), to: isoDate.optional() })
   .refine((q) => !q.from || !q.to || q.from <= q.to, { message: "La data iniziale è dopo quella finale" });
 
+const costOptions = z.object({
+  costMode: z.enum(COST_MODES).default("average"),
+  windowDays: z.coerce.number().int().min(1).max(730).default(COST_WINDOW_DAYS),
+});
+
+/** Diet analysis over a period (default: from the first diary entry to today). */
+export const analysisQuery = periodQuery.and(costOptions);
+
+/** "What if": replace `fromProduct` with `toProduct` (same product = only the quantity changes) × `factor`. */
+export const simulateQuery = analysisQuery.and(
+  z.object({
+    fromProduct: idParam,
+    toProduct: idParam,
+    factor: z.coerce.number().positive("Il fattore deve essere maggiore di 0").max(10).default(1),
+  }),
+);
+
 export const topProductsQuery = periodQuery.and(z.object({ limit: z.coerce.number().int().min(1).max(100).default(10) }));

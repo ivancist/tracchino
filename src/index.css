@@ -971,3 +971,41 @@ ul.notice {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- view switch (stats: spending / diet) ---------- */
+.segmented.tabs {
+  margin-bottom: 0.75rem;
+}
+
+.segmented.tabs button {
+  flex: 1;
+  min-height: var(--tap);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segmented.tabs button[aria-selected="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* links inside list rows: readable as text, still recognisable */
+.inline-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 0.2em;
+}
+
+.value-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+}

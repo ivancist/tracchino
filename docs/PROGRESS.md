@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (Fase 5)
+Ultimo aggiornamento: 2026-10-03 (Fase 6)
 
 ## Fasi
 
@@ -13,7 +13,7 @@ Ultimo aggiornamento: 2026-10-03 (Fase 5)
 | 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
 | 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
 | 5 Diario | ✅ completa (audit + review) | sì (`820286a`) |
-| 6 Analisi e simulazioni | da fare | — |
+| 6 Analisi e simulazioni | 🟡 completa in locale, in verifica (branch `phase-6-analysis`) | no |
 
 ## Fase 3: fatto (branch `phase-3-scan`)
 
@@ -169,6 +169,41 @@ Ultimo aggiornamento: 2026-10-03 (Fase 5)
 
 ### In produzione (2026-10-03)
 - Fast-forward di `main` a `820286a`, deploy; smoke test senza login (`/diario`, `/api/diary…`, `/api/products/1/portions`, `DELETE /api/portions/1`) → 302.
+
+## Fase 6: fatto (branch `phase-6-analysis`)
+
+- `shared/analysis.ts`:
+  - `dietSummary` (giorni registrati, medie, stima settimanale, voci senza costo);
+  - `nutrientValue` (cent per 100 kcal / 10 g di proteine, da centesimi e grammi grezzi);
+  - `consumptionVsPurchases`;
+  - `simulate` (A → B × fattore; differenza solo sulle voci toccate, `null` se manca un dato).
+- API:
+  - `GET /api/analysis?from&to&costMode&windowDays`: dieta e valore dei prodotti; periodo predefinito dal primo giorno del diario; massimo 3700 giorni;
+  - `GET /api/analysis/simulate?…&fromProduct&toProduct&factor`.
+- UI: Statistiche → "Spesa | Dieta" (`?vista=dieta`).
+  - Riquadri: costo medio al giorno, settimana stimata, kcal e proteine medie, costo per 100 kcal.
+  - Valore dei prodotti, ordinabile per più mangiati, € per 100 kcal o € per 10 g di proteine.
+  - "Cosa succede se…" con la differenza totale e per giorno registrato.
+- `src/costPreference.ts`: preferenza del costo comune a Diario e Analisi.
+- Test: `test/shared/analysis.test.ts` (10, valori a mano: A → A = 0, pasta → riso +6 cent / −16,2 kcal, 1,5× +27, metà −16), `test/routes/analysis.test.ts` (8), `e2e/analysis.spec.ts` (2 × 2).
+  - Mutation test (la simulazione ignora il prodotto sostitutivo): rilevato da test unitari, di integrazione ed e2e.
+- Bug di test trovato: gli e2e di Diario e Analisi scrivevano scontrini in anni casuali che potevano cadere nelle settimane usate dall'e2e Statistiche (flaky).
+  - Ora intervalli separati: Statistiche 2000–2019, Diario 1935–1989, Analisi 1902–1934.
+  - Pulizia degli scontrini a fine test; D1 locale ripulito.
+  - Suite completa ×2: 100/100.
+
+### Verifiche del 2026-10-03
+- `security-auditor`: SECURE, solo punti LOW. Corretti: acquisti raggruppati per prodotto una sola volta; `from` dopo il `to` predefinito → 400.
+- `phase-reviewer`: completa con riserve. Corretti:
+  - frequenza vera ("mangiato in X giorni su Y registrati · comprato in Z giorni");
+  - costo per 100 kcal della dieta solo su voci con costo e kcal (prima mescolava le due popolazioni);
+  - valori per prodotto non arrotondati (0,053 €);
+  - simulazione: unità diverse → 400, minimo 1 g;
+  - test: kcal 0, diario vuoto, `costMode=last`, fattore 10,01.
+- Scala `verify` verde: 378 test, 50 e2e.
+
+## Fase 6: da fare
+1. Merge, deploy (nessuna migrazione), smoke test.
 
 ## Note operative
 

@@ -159,6 +159,14 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 - Frequenza di consumo vs frequenza di acquisto per prodotto.
 - Costo medio giornaliero e settimanale della dieta, costo per 100 kcal e per 10 g di proteine di ogni prodotto.
 - **Simulazione**: "se sostituisco A con B (o cambio le quantità) nel periodo X" → differenza di costo e di macro.
+- Decisioni (2026-10-03):
+  - In Statistiche, vista "Dieta" accanto a "Spesa", con gli stessi periodi (predefinito: dal primo giorno del diario a oggi).
+  - Le medie della dieta contano **solo i giorni registrati**: un giorno senza diario non è un giorno a costo 0 (diverso dalla spesa, dove i giorni senza scontrini valgono 0). A settimana = 7 × media giornaliera, indicata come stima.
+  - Costi come nel diario (stessa modalità e finestra); le voci senza costo sono escluse e contate.
+  - Costo per 100 kcal e per 10 g di proteine di ogni prodotto, al costo dell'ultimo giorno del periodo, non arrotondato al centesimo (sotto i 10 cent si mostrano 3 decimali). Il costo per 100 kcal della dieta usa solo le voci che hanno sia costo sia kcal.
+  - La simulazione rifiuta prodotti in grammi contro prodotti in millilitri; un fattore piccolo lascia almeno 1 g.
+  - Consumo e acquisti nello stesso periodo: grammi mangiati (e in quanti giorni) e grammi comprati ("≥" se alcune righe non hanno quantità, "≈" se stimate).
+  - Simulazione: sostituire A con B (oppure A con A) moltiplicando i grammi per un fattore (0–10]. La differenza si calcola solo sulle voci toccate; è "n.d." se una di esse non ha il dato. Viene mostrata anche la media per giorno registrato.
 - **Verifiche**: test della simulazione su un diario di fixture (sostituire A con A dà differenza 0; i risultati coincidono con il calcolo a mano).
 
 ---
