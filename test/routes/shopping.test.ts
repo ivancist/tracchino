@@ -1,0 +1,179 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import type { PantryItem, ShoppingListItem } from "../../shared/api";
+import { addDays, todayRome } from "../../shared/dates";
+import { createTestApi } from "../helpers/api";
+import { resetDb } from "../helpers/db";
+
+let api: Awaited<ReturnType<typeof createTestApi>>;
+let storeId: number;
+let tuna: number;
+let yogurtA: number;
+let yogurtB: number;
+
+beforeEach(async () => {
+  await resetDb();
+  api = await createTestApi();
+  storeId = await api.store();
+  const group = (await api.post<{ id: number }>("/api/groups", { name: "Yogurt" })).body.id;
+  tuna = await api.product({ name: "Tonno", unit: "g", packageAmount: 112 });
+  yogurtA = await api.product({ name: "Yogurt greco", brand: "A", unit: "g", packageAmount: 1000, groupId: group });
+  yogurtB = await api.product({ name: "Yogurt greco", brand: "B", unit: "g", packageAmount: 500, groupId: group });
+});
+
+const list = async () => (await api.get<ShoppingListItem[]>("/api/shopping-list")).body.map((i) => [i.name, i.brand, i.packages]);
+
+describe("/api/shopping-list", () => {
+  it("adds products and free-text items; the same product twice adds up", async () => {
+    expect((await api.post("/api/shopping-list", { productId: tuna, packages: 2 })).status).toBe(201);
+    expect((await api.post("/api/shopping-list", { name: "Candele" })).status).toBe(201);
+    expect((await api.post("/api/shopping-list", { productId: tuna, packages: 1 })).status).toBe(200);
+    expect(await list()).toEqual([
+      ["Tonno", null, 3],
+      ["Candele", null, null],
+    ]);
+  });
+
+  it("changes the packages and removes items", async () => {
+    const { id } = (await api.post<{ id: number }>("/api/shopping-list", { productId: tuna })).body;
+    expect((await api.patch(`/api/shopping-list/${id}`, { packages: 4 })).status).toBe(200);
+    expect(await list()).toEqual([["Tonno", null, 4]]);
+    expect((await api.del(`/api/shopping-list/${id}`)).status).toBe(204);
+    expect(await list()).toEqual([]);
+    expect((await api.del(`/api/shopping-list/${id}`)).status).toBe(404);
+    expect((await api.patch(`/api/shopping-list/${id}`, { packages: 1 })).status).toBe(404);
+  });
+
+  it.each([
+    ["nothing to buy", {}],
+    ["blank name", { name: "   " }],
+    ["zero packages", { productId: 1, packages: 0 }],
+    ["fractional packages", { productId: 1, packages: 1.5 }],
+    ["too many packages", { productId: 1, packages: 100 }],
+    ["product id as text", { productId: "1" }],
+  ])("rejects %s with 400", async (_name, body) => {
+    expect((await api.post("/api/shopping-list", body)).status).toBe(400);
+  });
+
+  it("404 for an unknown product, 400 for a bad update", async () => {
+    expect((await api.post("/api/shopping-list", { productId: 9999 })).status).toBe(404);
+    const { id } = (await api.post<{ id: number }>("/api/shopping-list", { productId: tuna })).body;
+    expect((await api.patch(`/api/shopping-list/${id}`, { packages: -1 })).status).toBe(400);
+    expect((await api.patch("/api/shopping-list/abc", { packages: 1 })).status).toBe(400);
+  });
+
+  it("a new receipt takes what was bought off the list: same product, else same group; free text stays", async () => {
+    await api.post("/api/shopping-list", { productId: tuna, packages: 2 });
+    await api.post("/api/shopping-list", { productId: yogurtA, packages: 1 });
+    await api.post("/api/shopping-list", { name: "Candele" });
+    await api.receipt({
+      storeId,
+      date: "2026-10-04",
+      items: [
+        { productId: tuna, priceFullCents: 119, packages: 1 },
+        { productId: yogurtB, priceFullCents: 250 }, // another brand of yogurt, 1 package
+      ],
+    });
+    expect(await list()).toEqual([
+      ["Tonno", null, 1],
+      ["Candele", null, null],
+    ]);
+
+    // Editing a saved receipt doesn't touch the list again
+    const saved = (await api.get<{ id: number }[]>("/api/receipts")).body[0]!.id;
+    const put = await api.put(`/api/receipts/${saved}`, { storeId, date: "2026-10-04", items: [{ productId: tuna, priceFullCents: 238, packages: 2 }] });
+    expect(put.status).toBe(200);
+    expect(await list()).toEqual([
+      ["Tonno", null, 1],
+      ["Candele", null, null],
+    ]);
+  });
+
+  it("merging products moves their list items; both on the list → one row, packages added up", async () => {
+    await api.post("/api/shopping-list", { productId: yogurtB, packages: 2 });
+    expect((await api.post(`/api/products/${yogurtB}/merge`, { intoId: yogurtA })).status).toBe(200);
+    expect(await list()).toEqual([["Yogurt greco", "A", 2]]);
+
+    const yogurtC = await api.product({ name: "Yogurt bianco", unit: "g", packageAmount: 500 });
+    await api.post("/api/shopping-list", { productId: yogurtC, packages: 3 });
+    expect((await api.post(`/api/products/${yogurtC}/merge`, { intoId: yogurtA })).status).toBe(200);
+    expect(await list()).toEqual([["Yogurt greco", "A", 5]]);
+  });
+
+  it("deleting a product removes its list items", async () => {
+    const candle = await api.product({ name: "Candela", unit: "pz" });
+    await api.post("/api/shopping-list", { productId: candle });
+    expect((await api.del(`/api/products/${candle}`)).status).toBe(204);
+    expect(await list()).toEqual([]);
+  });
+});
+
+describe("/api/pantry", () => {
+  const today = todayRome();
+  const day = (n: number) => addDays(today, n);
+
+  it("yogurt: 1 kg bought, 200 g a day for 4 days → 200 g left, runs out tomorrow, 6 packages a month", async () => {
+    await api.receipt({ storeId, date: day(-4), items: [{ productId: yogurtA, priceFullCents: 440, packages: 1 }] });
+    for (const d of [-3, -2, -1, 0]) await api.post("/api/diary", { date: day(d), meal: "colazione", productId: yogurtA, amount: 200 });
+    await api.post("/api/diary", { date: day(-4), meal: "pranzo", productId: tuna, amount: 224 }); // logged day, before yogurt was first eaten
+
+    const items = (await api.get<PantryItem[]>("/api/pantry")).body;
+    const yogurt = items.find((i) => i.productId === yogurtA)!;
+    expect(yogurt).toMatchObject({
+      perDay: 200,
+      typicalDay: 200,
+      stock: { amount: 200, estimated: false, since: day(-4) },
+      forecast: { daysLeft: 1, runOutDate: day(1), urgency: "soon" },
+      suggestedPackages: 1,
+      packageEveryDays: 5,
+      packagesPerMonth: 6,
+      costPerMonthCents: 2640, // 6000 g × 4,40 €/kg
+      inList: false,
+    });
+
+    // Tuna eaten but never bought in the app: consumption known, stock and cost unknown (not 0)
+    const t = items.find((i) => i.productId === tuna)!;
+    expect(t).toMatchObject({ stock: null, forecast: null, costPerMonthCents: null, suggestedPackages: 2 });
+    // Soonest to run out first, unknown stock last
+    expect(items.map((i) => i.productId)).toEqual([yogurtA, tuna]);
+  });
+
+  it("tuna bought and eaten the same day: finished and suggested (2 cans), even with 1 logged day", async () => {
+    await api.receipt({ storeId, date: day(0), items: [{ productId: tuna, priceFullCents: 238, packages: 2 }] });
+    await api.post("/api/diary", { date: day(0), meal: "pranzo", productId: tuna, amount: 224 });
+    const [t] = (await api.get<PantryItem[]>("/api/pantry")).body;
+    expect(t).toMatchObject({ rateDays: 1, stock: { amount: 0 }, forecast: { daysLeft: 0, runOutDate: day(0), urgency: "finished" }, suggestedPackages: 2 });
+    expect(t).toMatchObject({ packagesPerMonth: null, costPerMonthCents: null }); // one meal: no monthly projection
+  });
+
+  it("cost mode 'last' uses the latest price; no package size → no packages", async () => {
+    const bananas = await api.product({ name: "Banane", unit: "g", avgPieceAmount: 120 });
+    await api.receipt({ storeId, date: day(-9), items: [{ productId: bananas, priceFullCents: 200, amount: 1000 }] });
+    await api.receipt({ storeId, date: day(-5), items: [{ productId: bananas, priceFullCents: 300, amount: 1000 }] });
+    for (const d of [-4, -3, -2]) await api.post("/api/diary", { date: day(d), meal: "snack", productId: bananas, amount: 100 });
+    const get = async (q: string) => (await api.get<PantryItem[]>(`/api/pantry${q}`)).body.find((i) => i.productId === bananas)!;
+    // 100 g/day × 30 = 3 kg: average (500 c / 2 kg) → 750; last (300 c / 1 kg) → 900
+    expect(await get("")).toMatchObject({ costPerMonthCents: 750, stock: { amount: 1700 } });
+    expect(await get("?costMode=last")).toMatchObject({ costPerMonthCents: 900, suggestedPackages: null, packagesPerMonth: null, packageEveryDays: null });
+  });
+
+  it("no forecast nor monthly use from fewer than 3 logged days", async () => {
+    await api.receipt({ storeId, date: day(-1), items: [{ productId: tuna, priceFullCents: 119, packages: 1 }] });
+    await api.post("/api/diary", { date: day(-1), meal: "pranzo", productId: tuna, amount: 100 });
+    await api.post("/api/diary", { date: day(0), meal: "colazione", productId: yogurtA, amount: 200 }); // today is logged too
+    const t = (await api.get<PantryItem[]>("/api/pantry")).body.find((i) => i.productId === tuna);
+    expect(t).toMatchObject({ rateDays: 2, stock: { amount: 12 }, forecast: null, packagesPerMonth: null, costPerMonthCents: null });
+  });
+
+  it("flags products already on the list, and validates its query", async () => {
+    await api.post("/api/diary", { date: day(0), meal: "colazione", productId: yogurtA, amount: 200 });
+    await api.post("/api/shopping-list", { productId: yogurtA });
+    expect((await api.get<PantryItem[]>("/api/pantry")).body[0]).toMatchObject({ productId: yogurtA, inList: true });
+    expect((await api.get("/api/pantry?costMode=nope")).status).toBe(400);
+    expect((await api.get("/api/pantry?windowDays=0")).status).toBe(400);
+  });
+
+  it("ignores products not eaten in the last 30 days", async () => {
+    await api.post("/api/diary", { date: day(-30), meal: "colazione", productId: yogurtA, amount: 200 });
+    expect((await api.get<PantryItem[]>("/api/pantry")).body).toEqual([]);
+  });
+});

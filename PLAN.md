@@ -170,6 +170,23 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
   - Simulazione: sostituire A con B (oppure A con A) moltiplicando i grammi per un fattore (0–10]. La differenza si calcola solo sulle voci toccate; è "n.d." se una di esse non ha il dato. Viene mostrata anche la media per giorno registrato.
 - **Verifiche**: test della simulazione su un diario di fixture (sostituire A con A dà differenza 0; i risultati coincidono con il calcolo a mano).
 
+### Fase 7 — Lista della spesa e scorte
+Richiesta dell'utente (2026-10-03): prevedere quando finisce un prodotto in base al diario, suggerire cosa comprare, sapere ogni quanto si consuma una confezione e quanto costa al mese. La lista resta flessibile.
+- **Scorta stimata** per prodotto = acquisti registrati nell'app − consumi del diario, a partire dal primo acquisto nell'app (scelta dell'utente: nessuna scorta iniziale né correzioni a mano).
+  - Quantità degli acquisti come in `shared/pricing.ts` (confezioni × peso della confezione, pesata o stimata con "≈").
+  - Un acquisto con quantità sconosciuta rende sconosciuta la scorta. Prodotti mai comprati nell'app → nessuna previsione.
+  - Nello stesso giorno l'acquisto viene prima del consumo. La scorta non scende mai sotto 0: aver mangiato più del comprato vuol dire che c'era altra scorta, ignota.
+- **Consumo giornaliero** = grammi mangiati negli ultimi 30 giorni / giorni registrati nel diario dalla prima volta che il prodotto è stato mangiato in quella finestra (yogurt 4 × 200 g in 4 giorni registrati → 200 g/giorno, non 160 contando anche il giorno prima). Come nell'analisi della dieta, un giorno senza diario non conta. Con meno di **3 giorni registrati** dalla prima volta che il prodotto è stato mangiato, niente previsione né consumo mensile: un solo pasto di tonno (224 g) non vuol dire 224 g al giorno.
+- **Previsione**: giorni rimasti = scorta / consumo giornaliero; data in cui finisce. Fasce di urgenza: **finito** (scorta 0), **entro 2 giorni**, **entro 7 giorni**. Oltre i 7 giorni non si suggerisce. Una scorta a 0 è "finito" (e si suggerisce) anche con meno di 3 giorni di diario.
+- **Quantità suggerita** in confezioni = consumo tipico di un giorno in cui il prodotto si mangia (mediana) / peso della confezione, arrotondato per eccesso, almeno 1 (tonno: 224 g in un pasto, confezione 112 g → 2). Senza peso della confezione: nessuna quantità. Si modifica a mano.
+- **Lista**: contiene solo ciò che l'utente sceglie. Sopra, "Suggeriti" per urgenza con "+ aggiungi" e quantità modificabile; si aggiunge anche qualsiasi prodotto o una voce libera ("candele"). I prodotti già in lista non compaiono nei suggeriti. Si spunta per togliere.
+- **Scontrino salvato** (nuovo, scansionato o manuale): le voci in lista dello stesso prodotto o dello **stesso gruppo** (altra marca) scalano delle confezioni comprate e spariscono a 0; una riga senza confezioni indicate vale 1 (come in `shared/pricing.ts`), una voce senza confezioni sparisce con qualsiasi acquisto. Le voci libere restano. Modificare uno scontrino già salvato non tocca la lista. Al massimo 500 voci.
+- **Consumi**: per ogni prodotto mangiato negli ultimi 30 giorni, consumo al giorno, "1 confezione ogni N giorni", confezioni al mese (30 giorni) e costo al mese = consumo × 30 × costo per grammo (stesse regole e preferenze del diario, "n.d." se mai comprato).
+- Prodotti che non finiscono nel diario (detersivi, spezie): solo a mano (scelta dell'utente).
+- Unione di prodotti: le voci in lista passano al prodotto che resta; se c'erano entrambi, una sola voce con le confezioni sommate.
+- UI: scheda "Lista" nella barra in basso, con "Lista" e "Scorte e consumi".
+- **Verifiche**: test della scorta e della previsione calcolati a mano sui dati reali (yogurt 1 kg − 4 × 200 g → 200 g, finisce domani; chia 90 g a 15 g/giorno → 6 giorni; avena 300 g a 50 g/giorno → 6 giorni; tonno 2 × 112 g mangiati → finito, 2 confezioni suggerite); scorta mai negativa; giorni senza diario esclusi; route della lista (400/401); scontrino salvato → voce scalata o rimossa, anche per un'altra marca dello stesso gruppo; e2e "suggerito → aggiunto → scontrino → sparisce".
+
 ---
 
 ## 5. Scansione scontrino — progetto dettagliato

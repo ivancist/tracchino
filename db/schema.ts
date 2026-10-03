@@ -212,3 +212,20 @@ export const aiUsage = sqliteTable("ai_usage", {
   scans: integer("scans").notNull().default(0),
   aiCalls: integer("ai_calls").notNull().default(0),
 });
+
+/** Shopping list (phase 7): a product (with packages to buy, if stated) or a free-text item ("candele"). */
+export const shoppingListItems = sqliteTable(
+  "shopping_list_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }),
+    name: text("name"),
+    packages: integer("packages"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("shopping_list_items_product_idx").on(t.productId),
+    check("shopping_list_items_what_chk", sql`${t.productId} is not null or ${t.name} is not null`),
+    check("shopping_list_items_packages_chk", sql`${t.packages} is null or ${t.packages} > 0`),
+  ],
+);

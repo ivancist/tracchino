@@ -6,6 +6,7 @@ import { normalizeRawText } from "../../shared/receipt-text";
 import { receiptInput, receiptListQuery } from "../../shared/schemas";
 import type { AppEnv } from "../app";
 import { IMAGE_TYPES, notFound, parseBody, parseId, parseImage, parseQuery, type ImageType } from "../http";
+import { shoppingListStatements } from "./shopping";
 
 type ReceiptBody = ReturnType<typeof receiptInput.parse>;
 
@@ -120,6 +121,8 @@ export const receiptRoutes = new Hono<AppEnv>()
         .bind(input.storeId, input.date, input.totalPrintedCents, input.notes, input.source),
       ...itemStatements(d1, input.items, null),
       ...aliasStatements(d1, input.storeId, input.items, true),
+      // A new receipt takes what was bought off the shopping list (editing a saved receipt doesn't).
+      ...(await shoppingListStatements(d1, input.items)),
     ]);
     return c.json<Created>({ id: created!.results[0]!.id }, 201);
   })

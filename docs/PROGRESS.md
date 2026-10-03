@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confezione")
+Ultimo aggiornamento: 2026-10-03 (Fase 7: lista della spesa e scorte)
 
 ## Riprendere da qui
 
@@ -29,6 +29,7 @@ Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confe
 | 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
 | 5 Diario | ✅ completa (audit + review) | sì (`820286a`) |
 | 6 Analisi e simulazioni | ✅ completa (audit + review) | sì (`334df0d`) |
+| 7 Lista della spesa e scorte | ✅ completa (audit + review) | da applicare (migrazione 0006) |
 
 ## Fase 3: fatto (branch `phase-3-scan`)
 
@@ -282,6 +283,23 @@ Correzione chiesta dall'utente dopo la versione precedente (sopra), che sommava 
 - Eval reale ×2: 100% su prezzi, confezioni/pezzi, righe unite, prodotti, alias, totale.
 - Riga dello scontrino: con più di una confezione mostra anche il prezzo per confezione ("0,89 €/conf.", `perPackageCents`), richiesto dall'utente.
 - In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0005-final.sql`, migrazione applicata (40 righe a 1 confezione, pezzi invariati, 27 "Confezione", nessun doppione), fast-forward di `main` a `87bb24e`, deploy, smoke test → 302.
+
+## Fase 7: lista della spesa e scorte (branch `phase-7-shopping`)
+
+Richiesta dell'utente; scelte dell'utente: scorta solo da acquisti nell'app (nessuna correzione a mano), suggerimenti per urgenza con quantità dal consumo tipico, proposte da accettare, prodotti fuori dal diario solo a mano.
+- `shared/pantry.ts`:
+  - `estimateStock`: acquisti dal primo nell'app − diario da allora, acquisto prima del consumo nello stesso giorno, mai sotto 0;
+  - `consumptionRate`: 30 giorni, giorni registrati dalla prima volta che è stato mangiato, mediana del giorno tipico; `isReliable` (≥ 3 giorni);
+  - `forecast` (finito / entro 2 / entro 7 giorni), `suggestedPackages`, `monthlyUse` (30 giorni, costo come nel diario).
+- `shared/shopping.ts` `applyPurchases`: uno scontrino nuovo scala la lista (stesso prodotto, poi stesso gruppo; il resto passa alla voce successiva).
+- Migrazione `0006_shopping_list` (solo una tabella nuova, con CHECK; cascade sull'eliminazione del prodotto).
+- API: `GET/POST /api/shopping-list` (stesso prodotto → confezioni sommate; massimo 500 voci), `PATCH/DELETE /api/shopping-list/:id`, `GET /api/pantry?costMode&windowDays`. `POST /api/receipts` aggiorna la lista nello stesso batch; l'unione di prodotti sposta e accorpa le voci.
+- UI: scheda "Lista" (6 schede: larghezza in base all'etichetta, verificato a 360 px), viste "Lista" (Da comprare, aggiunta di prodotti o testo libero, Suggeriti per urgenza con confezioni modificabili, ✓ per togliere) e "Scorte e consumi".
+- Verifica sui dati reali (sola lettura): yogurt 1 kg − 4 × 200 g = 200 g, finisce domani; chia 90 g e avena 300 g, 6 giorni; tonno 224 g in 5 giorni = 44,8 g/giorno. Gli stessi valori sono nei test unitari.
+- Test: `test/shared/pantry.test.ts` (19), `test/shared/shopping.test.ts` (6), `test/routes/shopping.test.ts` (17), `e2e/shopping.spec.ts` (suggerito → aggiunto → scontrino → esce; consumi 6 al mese e 26,40 €; etichette della barra a 360 px). Mutazioni (scorta negativa, giorni registrati dall'inizio della finestra, gruppo ignorato) rilevate.
+- `security-auditor`: SECURE, due LOW: tetto di 500 voci aggiunto; commento sulla lettura prima del batch corretto (utente singolo, accettato).
+- `phase-reviewer`: "non completa" per il tonno finito con meno di 3 giorni di diario, che non veniva suggerito. Corretto (scorta 0 → "finito" sempre). Corretti anche: unione di due prodotti entrambi in lista (una voce sola), etichette tagliate a 360 px. Aggiunti test: `costMode=last`, prodotto senza confezione, eliminazione a cascata.
+- Scala `verify` verde: 465 test, 54 e2e, build, segreti, config, migrazioni.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").

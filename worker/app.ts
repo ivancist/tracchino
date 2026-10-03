@@ -12,6 +12,7 @@ import { productRoutes } from "./routes/products";
 import { receiptRoutes } from "./routes/receipts";
 import { createScanRoutes, type AiFactory } from "./routes/scan";
 import { createGemini } from "./services/ai/gemini";
+import { pantryRoutes, shoppingListRoutes } from "./routes/shopping";
 import { statsRoutes } from "./routes/stats";
 import { storeRoutes } from "./routes/stores";
 
@@ -40,6 +41,8 @@ export function createApp(options: { keySet?: KeySetFactory; ai?: AiFactory; off
   app.route("/receipts/scan", createScanRoutes(options.ai ?? geminiFromEnv));
   app.route("/receipts", receiptRoutes);
   app.route("/stats", statsRoutes);
+  app.route("/shopping-list", shoppingListRoutes);
+  app.route("/pantry", pantryRoutes);
   app.route("/off", createOffRoutes(options.offFetch));
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));

@@ -191,3 +191,17 @@ export const simulateQuery = analysisQuery.and(
 );
 
 export const topProductsQuery = periodQuery.and(z.object({ limit: z.coerce.number().int().min(1).max(100).default(10) }));
+
+/** A shopping list item: a product (optionally how many packages) or a free-text name. */
+export const shoppingItemInput = z
+  .object({
+    productId: optionalPositiveInt,
+    name: optionalText(120),
+    packages: positiveInt.max(99).nullish().transform((v) => v ?? null),
+  })
+  .refine((i) => i.productId != null || i.name != null, { message: "Scegli un prodotto o scrivi cosa comprare", path: ["name"] });
+export type ShoppingItemInput = z.input<typeof shoppingItemInput>;
+
+export const shoppingItemUpdate = z.object({ packages: positiveInt.max(99).nullish().transform((v) => v ?? null) });
+
+export const pantryQuery = costOptions;

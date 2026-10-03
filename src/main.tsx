@@ -11,6 +11,7 @@ import { ProductEditPage } from "./pages/ProductEditPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ReceiptEditPage } from "./pages/ReceiptEditPage";
 import { ReceiptsPage } from "./pages/ReceiptsPage";
+import { ShoppingPage } from "./pages/ShoppingPage";
 import { StatsPage } from "./pages/StatsPage";
 import { StoresPage } from "./pages/StoresPage";
 import "./index.css";
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: "scontrini/nuovo", element: <ReceiptEditPage key="new" /> },
       { path: "scontrini/scansione", element: <ReceiptEditPage key="scan" scan /> },
       { path: "scontrini/:id", element: <ReceiptEditPage key="edit" /> },
+      { path: "lista", element: <ShoppingPage /> },
       { path: "diario", element: <DiaryPage /> },
       { path: "prodotti", element: <ProductsPage /> },
       { path: "prodotti/nuovo", element: <ProductEditPage /> },

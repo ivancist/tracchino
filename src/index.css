@@ -89,14 +89,16 @@ body {
 }
 
 .tab {
-  flex: 1;
+  /* Width follows the label: six tabs fit at 360px only if "Statistiche" may be wider than "Lista". */
+  flex: 1 1 auto;
   min-width: 0;
+  padding: 0 0.15rem;
   min-height: var(--tabbar-h);
   display: grid;
   place-items: center;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .tab.active {
@@ -402,6 +404,38 @@ label.button:focus-within {
   color: var(--muted);
   margin: 0 0 0.4rem;
   font-weight: 600;
+}
+
+/* ---------- shopping list ---------- */
+.shopping-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shopping-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+}
+
+.shopping-main {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.packages-input {
+  width: 4rem;
+  flex: none;
+  text-align: center;
 }
 
 /* ---------- receipt editor ---------- */

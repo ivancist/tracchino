@@ -240,3 +240,38 @@ export type ScanResult = {
   /** Scans left today under the safety cap. */
   scansLeft: number;
 };
+
+/** GET /api/shopping-list: a product to buy (packages if stated) or a free-text item. */
+export type ShoppingListItem = {
+  id: number;
+  productId: number | null;
+  /** Product name, or the free text. */
+  name: string;
+  brand: string | null;
+  unit: ProductUnit | null;
+  packageAmount: number | null;
+  packages: number | null;
+};
+
+/** GET /api/pantry: a product eaten in the last 30 days — stock, forecast, suggestion and monthly use. */
+export type PantryItem = {
+  productId: number;
+  name: string;
+  brand: string | null;
+  unit: ProductUnit;
+  packageAmount: number | null;
+  /** g/ml eaten per logged day, and on a typical day the product is eaten. */
+  perDay: number;
+  typicalDay: number;
+  /** Logged days the rate comes from; under MIN_RATE_DAYS there is no forecast nor monthly use. */
+  rateDays: number;
+  /** null: never bought in the app, or a purchase with unknown quantity. */
+  stock: { amount: number; estimated: boolean; since: string } | null;
+  forecast: { daysLeft: number; runOutDate: string; urgency: "finished" | "soon" | "week" | null } | null;
+  suggestedPackages: number | null;
+  packageEveryDays: number | null;
+  packagesPerMonth: number | null;
+  costPerMonthCents: number | null;
+  costEstimated: boolean;
+  inList: boolean;
+};

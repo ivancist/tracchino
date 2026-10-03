@@ -103,7 +103,7 @@ export const productRoutes = new Hono<AppEnv>()
     return c.body(null, 204);
   })
   /**
-   * Merges product :id into `intoId`: every receipt line, diary entry, portion and alias moves to the target,
+   * Merges product :id into `intoId`: every receipt line, diary entry, portion, shopping list item and alias moves to the target,
    * missing fields on the target (brand, barcode, sizes, nutrition) are filled from the source, then the source
    * is deleted. All in one D1 batch (atomic).
    */
@@ -130,6 +130,19 @@ export const productRoutes = new Hono<AppEnv>()
       d1.prepare("update receipt_items set product_id = ?1 where product_id = ?2").bind(intoId, fromId),
       d1.prepare("update diary_entries set product_id = ?1 where product_id = ?2").bind(intoId, fromId),
       d1.prepare("update portions set product_id = ?1 where product_id = ?2").bind(intoId, fromId),
+      d1.prepare("update shopping_list_items set product_id = ?1 where product_id = ?2").bind(intoId, fromId),
+      // Both on the list: one row, packages added up as when adding the same product twice (none stated → none).
+      d1
+        .prepare(
+          `update shopping_list_items
+              set packages = (select case when count(packages) = 0 then null else min(99, sum(coalesce(packages, 1))) end
+                                from shopping_list_items where product_id = ?1)
+            where id = (select min(id) from shopping_list_items where product_id = ?1)`,
+        )
+        .bind(intoId),
+      d1
+        .prepare("delete from shopping_list_items where product_id = ?1 and id <> (select min(id) from shopping_list_items where product_id = ?1)")
+        .bind(intoId),
       // An alias the target already has for the same chain wins; the duplicate is dropped with the source (cascade).
       d1.prepare("update or ignore product_aliases set product_id = ?1 where product_id = ?2").bind(intoId, fromId),
       d1.prepare("delete from products where id = ?").bind(fromId),

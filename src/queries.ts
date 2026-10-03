@@ -11,6 +11,8 @@ import type {
   LastPrice,
   MeResponse,
   OffLookup,
+  PantryItem,
+  ShoppingListItem,
   PriceStats,
   ScanResult,
   SpendingStats,
@@ -22,7 +24,17 @@ import type {
   Store,
 } from "../shared/api";
 import type { CostMode, Meal } from "../shared/diary";
-import type { ChainInput, DiaryBatchInput, DiaryEntryInput, GroupInput, PortionInput, ProductInput, ReceiptInput, StoreInput } from "../shared/schemas";
+import type {
+  ChainInput,
+  DiaryBatchInput,
+  DiaryEntryInput,
+  GroupInput,
+  PortionInput,
+  ProductInput,
+  ReceiptInput,
+  ShoppingItemInput,
+  StoreInput,
+} from "../shared/schemas";
 import { api } from "./api";
 
 export const keys = {
@@ -84,7 +96,8 @@ function useWrite<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>, invalid
 }
 
 // Stats and the diary (nutrition, costs from receipts) depend on everything: every write refreshes them too.
-const catalog = [keys.chains, keys.stores, keys.groups, keys.products, keys.receipts, ["stats"], ["diary"]] as const;
+// A new receipt also takes what was bought off the shopping list.
+const catalog = [keys.chains, keys.stores, keys.groups, keys.products, keys.receipts, ["stats"], ["diary"], ["shopping"]] as const;
 
 export const useSaveChain = () =>
   useWrite(({ id, ...input }: ChainInput & { id?: number }) =>
@@ -228,3 +241,16 @@ export const setPendingScan = (scan: PendingScan | null) => {
   pendingScan = scan;
 };
 export const getPendingScan = () => pendingScan;
+
+// Shopping list and pantry (phase 7). The pantry key sits under "diary": every diary or catalog write refreshes it.
+export const useShoppingList = () => useQuery({ queryKey: ["shopping"], queryFn: () => api.get<ShoppingListItem[]>("/api/shopping-list") });
+export const usePantry = (costMode: CostMode, windowDays: number) =>
+  useQuery({
+    queryKey: ["diary", "pantry", costMode, windowDays],
+    queryFn: () => api.get<PantryItem[]>(`/api/pantry?${new URLSearchParams({ costMode, windowDays: String(windowDays) })}`),
+  });
+const shopping = [["shopping"], ["diary", "pantry"]] as const;
+export const useAddShoppingItem = () => useWrite((input: ShoppingItemInput) => api.post<Created>("/api/shopping-list", input), shopping);
+export const useUpdateShoppingItem = () =>
+  useWrite(({ id, packages }: { id: number; packages: number | null }) => api.patch<Created>(`/api/shopping-list/${id}`, { packages }), shopping);
+export const useDeleteShoppingItem = () => useWrite((id: number) => api.del(`/api/shopping-list/${id}`), shopping);
