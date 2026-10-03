@@ -205,9 +205,9 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
 ### In produzione (2026-10-03)
 - Fast-forward di `main` a `334df0d`, deploy; smoke test senza login (`/statistiche`, `/api/analysis`, `/api/analysis/simulate`) → 302.
 
-## Fibre e grassi saturi (branch `fiber-saturated`, 2026-10-03)
+## Fibre e grassi saturi (2026-10-03, in produzione)
 
-- Migrazione `0003_fiber_saturated`: due colonne nullable `saturated_fat_100`, `fiber_100` su `products`. Solo `ALTER TABLE ADD`, senza CHECK (un CHECK ricostruirebbe `products`, da cui `portions` dipende in CASCADE); la validazione 0–100 è in Zod. Applicata in locale; **in produzione serve l'ok dell'utente** (backup → `db:migrate:remote` → deploy).
+- Migrazione `0003_fiber_saturated`: due colonne nullable `saturated_fat_100`, `fiber_100` su `products`. Solo `ALTER TABLE ADD`, senza CHECK (un CHECK ricostruirebbe `products`, da cui `portions` dipende in CASCADE); la validazione 0–100 è in Zod. In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0003.sql`, migrazione applicata (colonne verificate), fast-forward di `main` a `87cfc59`, deploy, smoke test → 302, select di prova in remoto riuscita.
 - Ovunque: form prodotto ("di cui saturi", "Fibre"), mapping OFF (`saturated-fat_100g`, `fiber_100g`), unione di prodotti, diario (riquadri e totali), analisi e simulazione.
 - Plausibilità:
   - saturi ≤ grassi (+0,5 g);
