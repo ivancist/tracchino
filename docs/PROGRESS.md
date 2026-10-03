@@ -12,7 +12,7 @@ Ultimo aggiornamento: 2026-10-03 (Fase 5)
 | 2 Statistiche | ✅ completa (audit + review) | sì (`9e62c5d`) |
 | 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
 | 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
-| 5 Diario | 🟡 completa in locale, in verifica (branch `phase-5-diary`) | no |
+| 5 Diario | ✅ completa (audit + review) | sì (`820286a`) |
 | 6 Analisi e simulazioni | da fare | — |
 
 ## Fase 3: fatto (branch `phase-3-scan`)
@@ -167,8 +167,8 @@ Ultimo aggiornamento: 2026-10-03 (Fase 5)
 - Bug trovato dall'e2e: cambiando un'impostazione del costo il riquadro si chiudeva durante il ricaricamento. Ora le impostazioni stanno fuori dal blocco dei dati.
 - Scala `verify` verde: 355 test, 46 e2e.
 
-## Fase 5: da fare
-1. Merge, deploy (nessuna migrazione), smoke test.
+### In produzione (2026-10-03)
+- Fast-forward di `main` a `820286a`, deploy; smoke test senza login (`/diario`, `/api/diary…`, `/api/products/1/portions`, `DELETE /api/portions/1`) → 302.
 
 ## Note operative
 
