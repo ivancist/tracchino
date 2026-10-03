@@ -3,7 +3,7 @@ import type { PriceStats, Product, PurchaseRow } from "../../shared/api";
 import { formatIsoDate, formatShortDate } from "../../shared/dates";
 import { formatCents } from "../../shared/money";
 import { unitPrices } from "../../shared/pricing";
-import { formatAmount, perKiloSuffix } from "../../shared/quantity";
+import { formatAmount, formatPackagesPieces, perKiloSuffix } from "../../shared/quantity";
 import type { StorePriceStats } from "../../shared/stats";
 import { usePriceStats } from "../queries";
 import { DotChart } from "./charts";
@@ -124,7 +124,7 @@ export function PriceSection({ product }: { product: Product }) {
                 <tbody>
                   {data.purchases.map((p) => {
                     const price = lineUnitPrice(p, metric, data.volume);
-                    const qty = [p.pieces != null ? `${p.pieces} pz` : null, p.amount != null ? formatAmount(p.amount, p.unit === "ml" ? "ml" : "g") : null]
+                    const qty = [formatPackagesPieces(p) || null, p.amount != null ? formatAmount(p.amount, p.unit === "ml" ? "ml" : "g") : null]
                       .filter(Boolean)
                       .join(" · ");
                     return (

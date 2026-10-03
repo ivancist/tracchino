@@ -64,7 +64,7 @@ product_aliases   id, chain_id, raw_text_norm, product_id, confirmations, last_s
                   UNIQUE(chain_id, raw_text_norm)
 receipts          id, store_id, date, total_printed_cents?, source ('manual'|'scan'), photo_key?, notes?
 receipt_items     id, receipt_id, product_id, raw_text?,
-                  pieces?, amount?            -- n° pezzi e/o g/ml totali (li inserisci tu)
+                  packages?, pieces?, amount? -- confezioni comprate, pezzi per confezione (o sfusi), g/ml pesati
                   price_full_cents, discount_cents DEFAULT 0,
                   price_paid_cents            -- = full - discount
 portions          id, product_id, name, amount   -- "1 banana" = 120 g
@@ -73,12 +73,13 @@ diary_entries     id, date, meal ('colazione'|'pranzo'|'cena'|'snack'),
 ```
 
 Valori derivati, calcolati dalle query e non salvati:
-- **€/kg (o €/l)** = `price_paid / amount`. **€/pezzo** = `price_paid / pieces`.
+- **Confezioni e pezzi sono cose diverse** (decisione dell'utente, 2026-10-03): `packages` = confezioni comprate (2 passate, 2 scatolette di sgombro); `pieces` = pezzi **in ogni confezione** (uova 6P → 6; carote 500 g → 6) oppure pezzi sfusi (6 banane). Pezzi totali = `packages` × `pieces` (confezioni assenti = 1): 2 confezioni di uova da 6 = 12 uova.
+- **€/kg (o €/l)** = `price_paid / amount`. **€/pezzo** = `price_paid / pezzi totali`.
 - Quantità della riga (`shared/pricing.ts`, fissata dai test):
   - `amount` inserito → **misurata**;
-  - `pieces` × `package_amount` → **confezione**: è esatta, non stimata (2 × pasta 500 g = 1 kg);
-  - `package_amount` senza `pieces` → si assume 1 confezione ed è **stimata** (nella UI "≈"): se ne hai comprate 2 e non lo scrivi, il €/kg risulta dimezzato;
-  - `pieces` × `avg_piece_amount` → **stimata** (6 banane × ~120 g);
+  - `packages` × `package_amount` → **confezione**: è esatta, non stimata (2 × pasta 500 g = 1 kg). I pezzi dentro la confezione non cambiano il peso;
+  - `package_amount` senza `packages` → si assume 1 confezione ed è **stimata** (nella UI "≈"): se ne hai comprate 2 e non lo scrivi, il €/kg risulta dimezzato;
+  - pezzi totali × `avg_piece_amount` → **stimata** (6 banane × ~120 g);
   - altrimenti la quantità è sconosciuta (`null`, mai 0).
   - Con `package_amount` e `avg_piece_amount` entrambi presenti vince la confezione.
   - Le aggregazioni (Fase 2) partono da prezzo pagato e quantità grezzi, non dai €/kg già arrotondati.
@@ -99,7 +100,7 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 
 ### Fase 1 — Spesa manuale
 - Gestione catene, negozi e prodotti (crea, modifica, unisci duplicati).
-- Nuovo scontrino: negozio + data, poi righe con **autocomplete del prodotto** (ricerca fuzzy), prezzo, sconto, pezzi e quantità.
+- Nuovo scontrino: negozio + data, poi righe con **autocomplete del prodotto** (ricerca fuzzy), prezzo, sconto, confezioni, pezzi e quantità.
 - Creazione di un nuovo prodotto direttamente dalla riga.
 - Il totale si aggiorna man mano. Elenco degli scontrini con modifica ed eliminazione.
 - UI pensata prima per il telefono (tastiera numerica, target grandi), usabile anche da desktop.
@@ -107,8 +108,8 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
   - "Unisci duplicati" vale per i **prodotti** (unità diverse non si uniscono). Catene e negozi hanno nomi univoci e si rinominano; per spostare uno scontrino su un altro negozio lo si modifica. L'unione di negozi verrà aggiunta solo se serve.
   - I gruppi si creano dal form prodotto e si rinominano o eliminano in fondo alla pagina Prodotti.
   - Le righe completamente vuote vengono ignorate. Il totale conta solo le righe complete e segnala quelle escluse.
-  - Il prezzo si precompila con l'ultimo pagato in quel negozio (escluso lo scontrino in modifica) **solo per i prodotti confezionati** (`package_amount` impostato). Sfusi (banane a peso) e prodotti a pezzi in confezioni variabili (uova da 6 o da 12) mostrano solo il suggerimento "ultima volta X · €/pz". **Pezzi e quantità non vengono mai precompilati né memorizzati sul prodotto.**
-  - Uova e simili sono un solo prodotto "a pezzi": nella riga si indica il numero di uova (6, 12, o 12 per 2×6), e si confronta il prezzo per uovo.
+  - Il prezzo si precompila con l'ultimo pagato in quel negozio (escluso lo scontrino in modifica) **solo per i prodotti confezionati** (`package_amount` impostato). Sfusi (banane a peso) e prodotti a pezzi in confezioni variabili (uova da 6 o da 12) mostrano solo il suggerimento "ultima volta X · €/pz". **Confezioni, pezzi e quantità non vengono mai precompilati né memorizzati sul prodotto.**
+  - Uova e simili sono un solo prodotto: nella riga si indicano le confezioni e i pezzi per confezione (2 × 6), e si confronta il prezzo per uovo. (Prima, fino al 2026-10-03, i pezzi erano il totale delle uova: con 1 confezione il valore è lo stesso.)
   - Sicurezza: le scritture sono accettate solo dalla stessa origine (`Sec-Fetch-Site`/`Origin`), solo con `Content-Type: application/json`, fino a 256 KB.
 - **Verifiche**: test sul calcolo di `price_paid`, €/kg ed €/pezzo (compresi i casi con quantità mancanti o stimate); test delle route CRUD (input non valido → 400); un e2e "crea uno scontrino con 3 righe → compare nell'elenco con il totale giusto".
 
@@ -187,7 +188,7 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 4. **Abbinamento delle righe** (vedi sotto).
 5. **Schermata di revisione** già compilata (obbligatoria, niente salvataggio automatico):
    - 🟢 abbinamento da alias, 🟡 proposta (fuzzy/AI) da confermare, 🔴 nessuna proposta o nuovo prodotto.
-   - Per ogni riga puoi cambiare il prodotto, correggere prezzo e sconto e aggiungere pezzi o peso.
+   - Per ogni riga puoi cambiare il prodotto, correggere prezzo e sconto e aggiungere confezioni, pezzi o peso.
    - **Controllo di coerenza**: la somma delle righe meno gli sconti viene confrontata con il totale stampato; se non coincidono compare un avviso.
 6. **Salvataggio**: scontrino + righe; per ogni riga confermata si crea o aggiorna l'alias `(chain_id, raw_text_norm) → product_id` (con `confirmations++`).
 
@@ -213,8 +214,11 @@ Il tuo consumo: 3 scontrini al giorno × 2 chiamate = circa 6 richieste al giorn
 **Decisione (2026-10-03)**: Workers AI come riserva è **rimandato**. Gemini Flash-Lite ha estratto e abbinato al 100% i primi scontrini reali, il client riprova una volta su 500/503 e la quota è circa 80 volte l'uso previsto. L'interfaccia `ReceiptAi` resta pronta: la riserva si aggiunge se compaiono indisponibilità ripetute o problemi di quota.
 
 **Decisione (2026-10-03, segnalazione dell'utente sullo scontrino Eurospin)**:
-- Le righe con la stessa descrizione normalizzata, consecutive o no, diventano **una sola riga** in revisione: importi e sconti sommati, pezzi sommati (una riga senza pezzi vale 1: "CECI 400g" × 2 → 2 pezzi; "UOVA 6P" × 2 → 12). Le righe pesate si uniscono solo con righe pesate (grammi sommati).
-- Una riga di quantità ("2 PZ x 1,99 EUR/PZ") è stampata **sopra** il suo prodotto. Il modello la trascrive come riga a sé (`kind: "quantity"`) e il Worker la aggancia al prodotto sotto (o, in mancanza, a quello sopra) solo se pezzi × prezzo unitario = importo; altrimenti la scarta.
+- Ogni riga stampata è 1 confezione. Le righe con la stessa descrizione normalizzata, consecutive o no, diventano **una sola riga** in revisione: importi, sconti e **confezioni** sommati ("CECI 400g" × 2 → 2 confezioni; "UOVA 6P" × 2 → 2 confezioni da 6 pezzi). Le righe pesate si uniscono solo con righe pesate (grammi sommati).
+- Una riga di quantità ("2 PZ x 1,99 EUR/PZ") indica le **confezioni** ed è stampata **sopra** il suo prodotto. Il modello la trascrive come riga a sé (`kind: "quantity"`) e il Worker la aggancia al prodotto sotto (o, in mancanza, a quello sopra) solo se quantità × prezzo unitario = importo; altrimenti la scarta.
+- I pezzi per confezione vengono solo dal testo stampato ("6P", "X4").
+
+**Decisione (2026-10-03)**: porzione **"Confezione"** predefinita per i prodotti in g/ml con peso della confezione. Si crea con il prodotto o quando il peso viene impostato o cambia, se il prodotto non ne ha già una (nome uguale, maiuscole a parte). Se il peso cambia, la porzione lo segue solo se coincideva col peso precedente: una ridimensionata a mano non si tocca. Lo storico del diario resta in grammi.
 
 **Da verificare in Fase 3**: limiti effettivi del free tier in AI Studio per l'account e la regione (Italia), e un confronto di qualità tra i due provider su 5–10 scontrini reali di negozi diversi.
 

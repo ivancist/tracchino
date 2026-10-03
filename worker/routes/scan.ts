@@ -107,6 +107,7 @@ export function createScanRoutes(aiFactory: AiFactory) {
         rawTextNorm: match.rawTextNorm,
         priceCents: l.priceCents,
         discountCents: Math.min(l.discountCents, l.priceCents),
+        packages: l.packages,
         pieces: l.pieces,
         amount: l.amountGrams,
         productId: match.productId,

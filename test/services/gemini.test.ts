@@ -30,7 +30,7 @@ describe("Gemini client", () => {
     const f = fakeFetch(() => ok(receipt));
     const out = await gemini(f.fn).extract(image);
     expect(out.store.vatNumber).toBe("01234567890"); // digits only
-    expect(out.lines[0]).toEqual({ kind: "product", rawText: "CECI 400g", priceCents: 49, discountCents: 0, pieces: null, unitPriceCents: null, amountGrams: null });
+    expect(out.lines[0]).toEqual({ kind: "product", rawText: "CECI 400g", priceCents: 49, discountCents: 0, quantity: null, unitPriceCents: null, amountGrams: null });
     expect(f.calls[0]!.url).not.toContain("test-key");
     expect((f.calls[0]!.init.headers as Record<string, string>)["x-goog-api-key"]).toBe("test-key");
   });

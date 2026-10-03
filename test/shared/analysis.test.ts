@@ -152,11 +152,11 @@ describe("consumptionVsPurchases", () => {
     const rows = consumptionVsPurchases(
       diary,
       [
-        { productId: PASTA, date: "2026-09-20", pieces: 1, amount: null }, // 500 g
-        { productId: PASTA, date: "2026-09-28", pieces: 2, amount: null }, // 1000 g
-        { productId: BANANA, date: "2026-09-28", pieces: 6, amount: null }, // ≈ 720 g
-        { productId: OLIO, date: "2026-09-28", pieces: 1, amount: null }, // unknown
-        { productId: RISO, date: "2026-09-29", pieces: 1, amount: null }, // 2000 g
+        { productId: PASTA, date: "2026-09-20", packages: 1, pieces: null, amount: null }, // 500 g
+        { productId: PASTA, date: "2026-09-28", packages: 2, pieces: null, amount: null }, // 1000 g
+        { productId: BANANA, date: "2026-09-28", packages: null, pieces: 6, amount: null }, // ≈ 720 g
+        { productId: OLIO, date: "2026-09-28", packages: 1, pieces: null, amount: null }, // unknown
+        { productId: RISO, date: "2026-09-29", packages: 1, pieces: null, amount: null }, // 2000 g
       ],
       info,
     );

@@ -32,13 +32,13 @@ async function seed(request: APIRequestContext, tag: string, [d1, d2]: [string, 
   const olio = await post("/api/products", { name: `Olio ${tag}`, unit: "ml", kcal100: 822 });
   const chainId = await post("/api/chains", { name: `E2E Analisi ${tag}` });
   const storeId = await post("/api/stores", { chainId, name: "Sede" });
-  receiptIds.push(await post("/api/receipts", { storeId, date: addDays(d1, -11), items: [{ productId: pasta, priceFullCents: 89, pieces: 1 }] }));
+  receiptIds.push(await post("/api/receipts", { storeId, date: addDays(d1, -11), items: [{ productId: pasta, priceFullCents: 89, packages: 1 }] }));
   receiptIds.push(await post("/api/receipts", {
     storeId,
     date: addDays(d1, -3),
     items: [
-      { productId: pasta, priceFullCents: 198, pieces: 2 },
-      { productId: riso, priceFullCents: 449, pieces: 1 },
+      { productId: pasta, priceFullCents: 198, packages: 2 },
+      { productId: riso, priceFullCents: 449, packages: 1 },
       { productId: banana, priceFullCents: 179, pieces: 6 },
     ],
   }));

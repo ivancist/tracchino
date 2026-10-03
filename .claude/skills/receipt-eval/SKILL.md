@@ -13,6 +13,9 @@ description: Evaluate receipt-scan accuracy (AI extraction + alias/fuzzy matchin
   { "chain": "Esselunga", "vat_number": "...", "date": "2026-10-01", "total_cents": 2345,
     "lines": [{ "raw_text": "BAN.CHIQ.", "price_cents": 189, "discount_cents": 0, "product": "Banane Chiquita" }] }
   ```
+  Optional per line: `packages` (packages bought on that printed line, default 1; a "2 PZ x 1,99" row above it → 2) and
+  `pieces` (pieces in each package, only when printed: "UOVA 6P" → 6). Repeated printed lines stay separate lines here;
+  the eval checks the merged review lines (`merged`) apart.
 Aim for 5–10 receipts covering different chains, discounts, weighed items and multi-quantity lines.
 
 ## Run

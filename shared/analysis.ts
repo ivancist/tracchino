@@ -82,7 +82,7 @@ export function nutrientValue(n: Nutrition, cost: UnitCost | null): { per100Kcal
   return { per100KcalCents: per(n.kcal100, 100), per10gProteinCents: per(n.protein100, 10) };
 }
 
-export type PurchaseRow = { productId: number; date: string; pieces: number | null; amount: number | null };
+export type PurchaseRow = { productId: number; date: string; packages: number | null; pieces: number | null; amount: number | null };
 
 export type ConsumptionRow = {
   productId: number;

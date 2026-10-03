@@ -11,8 +11,9 @@ export const extractedLine = z.object({
   rawText: z.string().trim().min(1).max(120),
   priceCents: cents,
   discountCents: cents.nullish().transform((v) => v ?? 0),
-  pieces: z.number().int().positive().max(999).nullish().transform((v) => v ?? null),
-  /** Price per piece printed on a quantity line ("2 PZ x 1,99 EUR/PZ" → 199): lets the Worker check whose pieces they are. */
+  /** Units bought, when printed: a quantity row "2 PZ x 1,99 EUR/PZ", or "2 X 1,29" on the product line → 2. */
+  quantity: z.number().int().positive().max(999).nullish().transform((v) => v ?? null),
+  /** Unit price of that quantity ("1,99 EUR/PZ" → 199): lets the Worker check which product the quantity belongs to. */
   unitPriceCents: cents.nullish().transform((v) => v || null),
   amountGrams: z.number().int().positive().max(100_000).nullish().transform((v) => v ?? null),
 });

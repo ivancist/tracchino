@@ -305,7 +305,8 @@ label.button:focus-within {
 }
 
 .grid-2,
-.grid-3 {
+.grid-3,
+.grid-4 {
   display: grid;
   gap: 0.5rem;
 }
@@ -316,6 +317,17 @@ label.button:focus-within {
 
 .grid-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Receipt line: price, packages, pieces, weight — 2 × 2 on phones. */
+.grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 600px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .actions {

@@ -115,8 +115,13 @@ test("banane e uova: niente prezzo né pezzi precompilati, solo il suggerimento"
   await page.getByRole("combobox", { name: "Prodotto riga 2" }).fill(`Uova ${tag}`);
   await page.getByRole("option", { name: `Uova ${tag}` }).click();
   await expect(page.getByLabel("Prezzo riga 2")).toHaveValue("");
+  await expect(page.getByLabel("Confezioni riga 2")).toHaveValue("");
   // 12 eggs for 3,49 € → 0,29 €/egg
   await page.getByLabel("Prezzo riga 2").fill("3,49");
   await page.getByLabel("Pezzi riga 2").fill("12");
+  await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/0,29\s€\/pz/);
+  // The same 12 eggs as 2 packs of 6: 2 packages × 6 pieces each
+  await page.getByLabel("Confezioni riga 2").fill("2");
+  await page.getByLabel("Pezzi riga 2").fill("6");
   await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/0,29\s€\/pz/);
 });

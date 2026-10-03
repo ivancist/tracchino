@@ -45,9 +45,9 @@ export const storeRoutes = new Hono<AppEnv>()
     const id = parseId(c);
     const { excludeReceipt } = parseQuery(c, lastPricesQuery);
     const { results } = await c.env.DB.prepare(
-      `select productId, priceFullCents, discountCents, pieces, amount, date from (
+      `select productId, priceFullCents, discountCents, packages, pieces, amount, date from (
          select ri.product_id as productId, ri.price_full_cents as priceFullCents, ri.discount_cents as discountCents,
-                ri.pieces, ri.amount, r.date,
+                ri.packages, ri.pieces, ri.amount, r.date,
                 row_number() over (partition by ri.product_id order by r.date desc, r.id desc, ri.id desc) as rn
            from receipt_items ri
            join receipts r on r.id = ri.receipt_id

@@ -54,7 +54,7 @@ async function seed(request: APIRequestContext, tag: string, day: string) {
     storeId,
     date: addDays(day, -5),
     items: [
-      { productId: pasta, priceFullCents: 89, pieces: 1 },
+      { productId: pasta, priceFullCents: 89, packages: 1 },
       { productId: banana, priceFullCents: 179, pieces: 6 },
     ],
   }));
@@ -156,6 +156,8 @@ test("diario: nuova porzione creata al volo, navigazione tra i giorni", async ({
   await dialog.getByLabel("Alimento").fill(`Spaghetti ${tag}`);
   await dialog.getByRole("option", { name: `Spaghetti ${tag}` }).click();
   await dialog.getByRole("radio", { name: "Porzioni" }).check();
+  // Packaged product: "Confezione" is there by default
+  await expect(dialog.getByLabel("Porzione", { exact: true }).locator("option", { hasText: "Confezione (500 g)" })).toHaveCount(1);
   await dialog.getByLabel("Porzione", { exact: true }).selectOption({ label: "+ Nuova porzione…" });
   await dialog.getByLabel("Nome porzione").fill("1 piatto");
   await dialog.getByLabel("Grammi della porzione").fill("90");
@@ -166,7 +168,10 @@ test("diario: nuova porzione creata al volo, navigazione tra i giorni", async ({
 
   // The portion is now on the product page too
   const portions = (await (await request.get(`/api/products/${pasta}/portions`)).json()) as { name: string; amount: number }[];
-  expect(portions).toEqual([expect.objectContaining({ name: "1 piatto", amount: 90 })]);
+  expect(portions).toEqual([
+    expect.objectContaining({ name: "1 piatto", amount: 90 }),
+    expect.objectContaining({ name: "Confezione", amount: 500 }),
+  ]);
 
   // Day navigation
   await page.getByRole("button", { name: "Giorno successivo" }).click();
@@ -222,8 +227,8 @@ test("diario: ripeti un pasto precedente cambiando marca e quantità; totali del
       storeId,
       date: addDays(day, -5),
       items: [
-        { productId: yogurtB, priceFullCents: 89, pieces: 1 },
-        { productId: avena, priceFullCents: 129, pieces: 1 },
+        { productId: yogurtB, priceFullCents: 89, packages: 1 },
+        { productId: avena, priceFullCents: 129, packages: 1 },
       ],
     }),
   );

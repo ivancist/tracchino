@@ -19,13 +19,13 @@ beforeEach(async () => {
   banana = await api.product({ name: "Banane", unit: "g", avgPieceAmount: 120, kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8 });
   olio = await api.product({ name: "Olio", unit: "ml", kcal100: 822 }); // never bought
   // Pasta 287 cents / 1500 g, rice 449 / 2000 g, bananas 179 / ≈ 720 g
-  await api.receipt({ storeId, date: "2026-09-20", items: [{ productId: pasta, priceFullCents: 89, pieces: 1 }] });
+  await api.receipt({ storeId, date: "2026-09-20", items: [{ productId: pasta, priceFullCents: 89, packages: 1 }] });
   await api.receipt({
     storeId,
     date: "2026-09-28",
     items: [
-      { productId: pasta, priceFullCents: 198, pieces: 2 },
-      { productId: riso, priceFullCents: 449, pieces: 1 },
+      { productId: pasta, priceFullCents: 198, packages: 2 },
+      { productId: riso, priceFullCents: 449, packages: 1 },
       { productId: banana, priceFullCents: 179, pieces: 6 },
     ],
   });

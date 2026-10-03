@@ -16,15 +16,16 @@ import type { compressReceiptPhoto as Compress } from "../src/image";
 import { normalizeRawText } from "../shared/receipt-text";
 import { normalizeText, trigramSimilarity } from "../shared/text";
 import { createGemini } from "../worker/services/ai/gemini";
-import { mergeDuplicateLines, prepareLines } from "../worker/services/scan-lines";
-import type { ExtractedReceipt, ProductChoice } from "../worker/services/ai/types";
+import { mergeDuplicateLines, prepareLines, type ReviewLine } from "../worker/services/scan-lines";
+import type { ProductChoice } from "../worker/services/ai/types";
 import { decide, findCandidates, matchStore, type Alias, type CatalogProduct, type CatalogStore } from "../worker/services/matching";
 
 const ROOT = "fixtures/receipts";
 const RESULTS = join(ROOT, "results");
 const DEV_SERVER = "http://localhost:5173";
 
-type ExpectedLine = { raw_text: string; price_cents: number; discount_cents: number; product: string; pieces?: number };
+/** `packages`: packages bought on the printed line (default 1, "2 PZ x" → 2); `pieces`: pieces in each package ("6P"). */
+type ExpectedLine = { raw_text: string; price_cents: number; discount_cents: number; product: string; packages?: number; pieces?: number };
 type Expected = { chain: string; vat_number: string | null; date: string; total_cents: number; lines: ExpectedLine[] };
 
 const { values: args } = parseArgs({
@@ -86,11 +87,11 @@ async function compressedPhoto(dir: string): Promise<{ data: ArrayBuffer; mimeTy
 const textSim = (a: string, b: string) => trigramSimilarity(normalizeText(normalizeRawText(a)), normalizeText(normalizeRawText(b)));
 
 /** Pairs extracted lines with expected ones: same price + most similar text first, then text alone (price wrong). */
-function alignLines(expected: ExpectedLine[], got: ExtractedReceipt["lines"]) {
+function alignLines(expected: ExpectedLine[], got: ReviewLine[]) {
   const pairs: { e: number; g: number }[] = [];
   const usedE = new Set<number>();
   const usedG = new Set<number>();
-  const pass = (accept: (e: ExpectedLine, g: ExtractedReceipt["lines"][number]) => number | null) => {
+  const pass = (accept: (e: ExpectedLine, g: ReviewLine) => number | null) => {
     const options: { e: number; g: number; score: number }[] = [];
     expected.forEach((e, ei) =>
       got.forEach((g, gi) => {
@@ -202,7 +203,7 @@ async function main() {
         got: ext.rawText,
         priceOk: ext.priceCents === exp.price_cents,
         discountOk: ext.discountCents === exp.discount_cents,
-        piecesOk: ext.pieces === (exp.pieces ?? null),
+        quantityOk: ext.packages === (exp.packages ?? 1) && ext.pieces === (exp.pieces ?? null),
         candidateRecall: found[g]!.candidates.some((c) => c.productId === want),
         aiPick: aiMatch ? (choices.find((c) => c.index === g)?.productId ?? null) === want : null,
         finalOk: d.productId === want,
@@ -211,10 +212,10 @@ async function main() {
       };
     });
     const n = expected.lines.length;
-    const mergedKey = (l: { rawText: string; priceCents: number; pieces: number | null }) => `${normalizeRawText(l.rawText)}|${l.priceCents}|${l.pieces}`;
+    const mergedKey = (l: ReviewLine) => `${normalizeRawText(l.rawText)}|${l.priceCents}|${l.packages}|${l.pieces}`;
     const mergedGot = mergeDuplicateLines(got.lines).map(mergedKey);
     const mergedWant = mergeDuplicateLines(
-      expected.lines.map((l) => ({ rawText: l.raw_text, priceCents: l.price_cents, discountCents: l.discount_cents, kind: "product" as const, pieces: l.pieces ?? null, unitPriceCents: null, amountGrams: null })),
+      expected.lines.map((l) => ({ rawText: l.raw_text, priceCents: l.price_cents, discountCents: l.discount_cents, packages: l.packages ?? 1, pieces: l.pieces ?? null, amountGrams: null })),
     ).map(mergedKey);
     const count = (f: (l: (typeof lines)[number]) => boolean) => lines.filter(f).length;
     const sum = got.lines.reduce((s, l) => s + l.priceCents - l.discountCents, 0);
@@ -229,7 +230,7 @@ async function main() {
       date: { expected: expected.date, got: got.date },
       totalOk: got.totalCents === expected.total_cents,
       sumCheck: got.totalCents != null && sum === got.totalCents,
-      /** Review screen lines (repeated items merged): same text, amount and pieces as the merged ground truth, in order. */
+      /** Review screen lines (repeated items merged): same text, amount, packages and pieces as the merged ground truth, in order. */
       mergedOk: mergedGot.join("\n") === mergedWant.join("\n"),
       mergedLines: { expected: mergedWant.length, got: mergedGot.length },
       lines: { expected: n, extracted: got.lines.length, matched: pairs.length },
@@ -237,7 +238,7 @@ async function main() {
       precision: pct(pairs.length, got.lines.length),
       priceExact: pct(count((l) => l.priceOk), n),
       discountOk: pct(count((l) => l.discountOk), n),
-      piecesOk: pct(count((l) => l.piecesOk), n),
+      quantityOk: pct(count((l) => l.quantityOk), n),
       candidateRecall: pct(count((l) => l.candidateRecall), n),
       aiPick: aiMatch ? pct(count((l) => l.aiPick === true), n) : null,
       productOk: pct(count((l) => l.finalOk), n),
@@ -246,17 +247,17 @@ async function main() {
       extractMs,
       matchMs,
       aiCalls,
-      mismatches: lines.filter((l) => !l.priceOk || !l.finalOk || !l.aliasOk || !l.piecesOk),
+      mismatches: lines.filter((l) => !l.priceOk || !l.finalOk || !l.aliasOk || !l.quantityOk),
       unmatchedExpected: expected.lines.filter((_, i) => !pairs.some((p) => p.e === i)).map((l) => `${l.raw_text} ${l.price_cents}`),
-      extracted: raw.lines.map((l) => `${l.kind} ${l.rawText} | ${l.priceCents} | pz ${l.pieces ?? "-"} × ${l.unitPriceCents ?? "-"}`),
+      extracted: raw.lines.map((l) => `${l.kind} ${l.rawText} | ${l.priceCents} | qty ${l.quantity ?? "-"} × ${l.unitPriceCents ?? "-"}`),
       unmatchedExtracted: got.lines.filter((_, i) => !pairs.some((p) => p.g === i)).map((l) => `${l.rawText} ${l.priceCents}`),
     };
-    console.log(`recall ${r.recall}% · prezzi ${r.priceExact}% · pezzi ${r.piecesOk}% · unite ${r.mergedOk ? "ok" : "✗"} · prodotti ${r.productOk}% · ${extractMs + matchMs} ms`);
+    console.log(`recall ${r.recall}% · prezzi ${r.priceExact}% · conf./pezzi ${r.quantityOk}% · unite ${r.mergedOk ? "ok" : "✗"} · prodotti ${r.productOk}% · ${extractMs + matchMs} ms`);
     return r;
   }
 
   const totalExpected = receipts.reduce((s, r) => s + r.lines.expected, 0);
-  const weighted = (k: "recall" | "priceExact" | "discountOk" | "piecesOk" | "candidateRecall" | "aiPick" | "productOk" | "aliasSecondScan") =>
+  const weighted = (k: "recall" | "priceExact" | "discountOk" | "quantityOk" | "candidateRecall" | "aiPick" | "productOk" | "aliasSecondScan") =>
     receipts.some((r) => r[k] == null) ? null : pct(receipts.reduce((s, r) => s + (r[k]! / 100) * r.lines.expected, 0), totalExpected);
   const overall = {
     receipts: receipts.length,
@@ -273,7 +274,7 @@ async function main() {
     ),
     priceExact: weighted("priceExact"),
     discountOk: weighted("discountOk"),
-    piecesOk: weighted("piecesOk"),
+    quantityOk: weighted("quantityOk"),
     candidateRecall: weighted("candidateRecall"),
     aiPick: weighted("aiPick"),
     productOk: weighted("productOk"),
@@ -302,7 +303,7 @@ async function main() {
   for (const r of receipts) {
     if (r.mismatches.length || r.unmatchedExpected.length || r.unmatchedExtracted.length) {
       console.log(`\n${r.id}:`);
-      for (const m of r.mismatches) console.log(`  ${m.expected} ← ${m.got}: price ${m.priceOk ? "ok" : "✗"}, pieces ${m.piecesOk ? "ok" : "✗"}, product ${m.finalOk ? "ok" : "✗"} (${m.status}), alias ${m.aliasOk ? "ok" : "✗"}`);
+      for (const m of r.mismatches) console.log(`  ${m.expected} ← ${m.got}: price ${m.priceOk ? "ok" : "✗"}, conf./pezzi ${m.quantityOk ? "ok" : "✗"}, product ${m.finalOk ? "ok" : "✗"} (${m.status}), alias ${m.aliasOk ? "ok" : "✗"}`);
       for (const u of r.unmatchedExpected) console.log(`  missing: ${u}`);
       for (const u of r.unmatchedExtracted) console.log(`  extra:   ${u}`);
     }

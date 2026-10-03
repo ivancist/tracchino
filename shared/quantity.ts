@@ -33,6 +33,13 @@ export function formatAmount(amount: number, unit: ProductUnit): string {
   return `${NUM.format(amount)} ${volume ? "ml" : "g"}`;
 }
 
+/** "2 conf. × 6 pz", "2 conf.", "6 pz" (one package is not worth saying); "" when nothing is known. */
+export function formatPackagesPieces(q: { packages: number | null; pieces: number | null }): string {
+  const packages = q.packages != null && q.packages > 1 ? `${q.packages} conf.` : null;
+  const pieces = q.pieces != null ? `${q.pieces} pz` : null;
+  return [packages, pieces].filter(Boolean).join(" × ");
+}
+
 /** Suffix for a price per 1000 g/ml, appended to a formatted price: "2,11 €" + "/kg". */
 export function perKiloSuffix(unit: ProductUnit): string {
   return unit === "ml" ? "/l" : "/kg";

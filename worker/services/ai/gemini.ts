@@ -28,10 +28,12 @@ Leggi lo scontrino nella foto e restituisci SOLO dati stampati sullo scontrino, 
   - discountCents: se subito dopo il prodotto c'è una riga di sconto (SCONTO, PROMO, OFFERTA, importo negativo come "-0,50"), metti qui l'importo POSITIVO dello sconto e NON creare una voce separata. Altrimenti 0.
   - kind: "product" per un prodotto. "quantity" per una riga di quantità senza descrizione del prodotto (es. "2 PZ x 1,99 EUR/PZ",
     "3 X 0,89"): trascrivila come voce a sé, nella sua posizione, con rawText = il testo della riga, priceCents = 0,
-    pieces = numero di pezzi, unitPriceCents = prezzo unitario. Non spostare gli importi: ogni importo resta alla riga su cui
-    è stampato (la riga di quantità di solito non ha importo).
-  - pieces: per un prodotto, numero di pezzi solo se stampato nella sua riga (es. "UOVA 6P" → 6, "YOGURT 2 X 0,79" → 2). Altrimenti null.
-  - unitPriceCents: solo per le righe di quantità ("1,99 EUR/PZ" → 199). Altrimenti null.
+    quantity = numero di unità, unitPriceCents = prezzo unitario. Non spostare gli importi: ogni importo resta alla riga su
+    cui è stampato (la riga di quantità di solito non ha importo).
+  - quantity: per un prodotto, numero di unità solo se stampato nella sua riga come moltiplicazione (es. "YOGURT 2 X 0,79" → 2,
+    con unitPriceCents = 79). Il numero di pezzi nella descrizione ("UOVA 6P", "X4") NON è una quantità: resta nel rawText.
+    Altrimenti null.
+  - unitPriceCents: prezzo unitario della quantità ("1,99 EUR/PZ" → 199). Altrimenti null.
   - Ogni riga stampata è una voce, anche se uguale a un'altra (due "CECI 400g" = due voci).
   - amountGrams: peso solo se stampato (es. "0,856 kg x 1,99 €/kg" → 856). Altrimenti null.
 - Escludi righe che non sono prodotti: subtotali, totale, IVA, pagamento, resto, punti fedeltà, buoni.
@@ -60,11 +62,11 @@ const RECEIPT_SCHEMA = {
           rawText: { type: "string" },
           priceCents: { type: "integer" },
           discountCents: { type: "integer" },
-          pieces: { type: "integer", nullable: true },
+          quantity: { type: "integer", nullable: true },
           unitPriceCents: { type: "integer", nullable: true },
           amountGrams: { type: "integer", nullable: true },
         },
-        required: ["kind", "rawText", "priceCents", "discountCents", "pieces", "unitPriceCents", "amountGrams"],
+        required: ["kind", "rawText", "priceCents", "discountCents", "quantity", "unitPriceCents", "amountGrams"],
       },
     },
   },

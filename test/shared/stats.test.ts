@@ -100,6 +100,7 @@ describe("priceStatsByStore (estimated quantities)", () => {
     storeId,
     storeName: `S${storeId}`,
     chainName: storeId === 1 ? "Esselunga" : "Lidl",
+    packages: null,
     pieces,
     amount,
     pricePaidCents,
@@ -129,6 +130,22 @@ describe("priceStatsByStore (estimated quantities)", () => {
     });
   });
 
+  it("counts pieces over every package: 2 packs of 6 eggs are 12 eggs", () => {
+    const eggs = { unit: "g", packageAmount: null, avgPieceAmount: null } as const;
+    const r = priceStatsByStore(
+      [
+        // Store 1: 2 packs × 6 for 3.98 € → 398 / 12 = 33.2 → 33 c/egg; store 2: 1 pack × 10 for 3.50 € → 35 c/egg
+        { ...line(1, "2026-09-01", 398, 6, null, eggs), packages: 2 },
+        { ...line(2, "2026-09-01", 350, 10, null, eggs), packages: 1 },
+      ],
+      { metric: "piece", volume: false },
+    );
+    expect(r.map((s) => [s.storeId, s.perPiece?.cents])).toEqual([
+      [1, 33],
+      [2, 35],
+    ]);
+  });
+
   it("puts stores without a comparable unit price last", () => {
     const lettuce = { unit: "pz", packageAmount: null, avgPieceAmount: null } as const;
     const r = priceStatsByStore([line(1, "2026-09-01", 99, null, null, lettuce), line(2, "2026-09-01", 120, 2, null, lettuce)], {
@@ -143,7 +160,7 @@ describe("priceStatsByStore (estimated quantities)", () => {
 });
 
 describe("priceStatsByStore never blends metrics", () => {
-  const base = { storeName: "S", chainName: "C", pieces: null as number | null };
+  const base = { storeName: "S", chainName: "C", packages: null as number | null, pieces: null as number | null };
   it("ignores volume lines when ranking by €/kg (group mixing g and ml)", () => {
     const r = priceStatsByStore(
       [

@@ -47,7 +47,7 @@ async function loadCatalog(db: D1Database, productIds: number[], costMode: CostM
          from products where id in (select value from json_each(?))`,
     ).bind(ids),
     db.prepare(
-      `select ri.product_id as productId, r.date, ri.price_paid_cents as paidCents, ri.pieces, ri.amount
+      `select ri.product_id as productId, r.date, ri.price_paid_cents as paidCents, ri.packages, ri.pieces, ri.amount
          from receipt_items ri join receipts r on r.id = ri.receipt_id
         where ri.product_id in (select value from json_each(?))`,
     ).bind(ids),
@@ -86,7 +86,7 @@ export const analysisRoutes = new Hono<AppEnv>()
     const rows = await diaryRows(db, from, to);
     const { results: boughtInPeriod } = await db
       .prepare(
-        `select ri.product_id as productId, r.date, ri.pieces, ri.amount
+        `select ri.product_id as productId, r.date, ri.packages, ri.pieces, ri.amount
            from receipt_items ri join receipts r on r.id = ri.receipt_id where r.date between ? and ?`,
       )
       .bind(from, to)

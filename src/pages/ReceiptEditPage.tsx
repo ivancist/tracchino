@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { LastPrice, MatchStatus, Product, ReceiptDetail, ScanResult } from "../../shared/api";
 import { formatIsoDate, todayRome } from "../../shared/dates";
 import { centsToInput, formatCents, parseEuroToCents } from "../../shared/money";
-import { perPieceCents, shouldPrefillPrice, unitPrices } from "../../shared/pricing";
+import { perPieceCents, shouldPrefillPrice, totalPieces, unitPrices } from "../../shared/pricing";
 import { formatAmount, parseAmount, perKiloSuffix } from "../../shared/quantity";
 import { receiptInput, type ReceiptInput } from "../../shared/schemas";
 import { ProductForm } from "../components/ProductForm";
@@ -31,6 +31,7 @@ type Line = {
   rawText: string | null;
   price: string;
   discount: string;
+  packages: string;
   pieces: string;
   amount: string;
   showDiscount: boolean;
@@ -45,6 +46,7 @@ const emptyLine = (): Line => ({
   rawText: null,
   price: "",
   discount: "",
+  packages: "",
   pieces: "",
   amount: "",
   showDiscount: false,
@@ -58,6 +60,7 @@ function linesFrom(receipt: ReceiptDetail): Line[] {
     rawText: i.rawText,
     price: centsToInput(i.priceFullCents),
     discount: i.discountCents ? centsToInput(i.discountCents) : "",
+    packages: i.packages != null ? String(i.packages) : "",
     pieces: i.pieces != null ? String(i.pieces) : "",
     amount: i.amount != null ? String(i.amount) : "",
     showDiscount: i.discountCents > 0,
@@ -72,6 +75,7 @@ function linesFromScan(result: ScanResult): Line[] {
     rawText: l.rawText,
     price: centsToInput(l.priceCents),
     discount: l.discountCents ? centsToInput(l.discountCents) : "",
+    packages: String(l.packages),
     pieces: l.pieces != null ? String(l.pieces) : "",
     amount: l.amount != null ? String(l.amount) : "",
     showDiscount: l.discountCents > 0,
@@ -85,7 +89,7 @@ const needsConfirmation = (line: Line) => line.scan?.status === "uncertain" && !
 /** "ultima volta 1,79 € · 0,30 €/pz (ven 2 ott 2026)" */
 function lastPriceHint(last: LastPrice): string {
   const paid = last.priceFullCents - last.discountCents;
-  const perPiece = perPieceCents(paid, last.pieces);
+  const perPiece = perPieceCents(paid, totalPieces(last));
   return `ultima volta ${formatCents(paid)}${perPiece != null ? ` · ${formatCents(perPiece)}/pz` : ""} (${formatIsoDate(last.date)})`;
 }
 
@@ -93,6 +97,7 @@ type ParsedLine = {
   product: Product | null;
   priceFullCents: number | null;
   discountCents: number | null;
+  packages: number | null;
   pieces: number | null;
   amount: number | null;
   errors: string[];
@@ -102,7 +107,9 @@ function parseLine(line: Line, product: Product | null): ParsedLine {
   const errors: string[] = [];
   const priceFullCents = line.price ? parseEuroToCents(line.price) : null;
   const discountCents = line.discount ? parseEuroToCents(line.discount) : 0;
-  const pieces = line.pieces ? (/^\d+$/.test(line.pieces.trim()) && Number(line.pieces) > 0 ? Number(line.pieces) : NaN) : null;
+  const count = (s: string) => (s ? (/^\d+$/.test(s.trim()) && Number(s) > 0 ? Number(s) : NaN) : null);
+  const packages = count(line.packages);
+  const pieces = count(line.pieces);
   const amount = line.amount && product ? parseAmount(line.amount, product.unit === "ml" ? "ml" : "g") : null;
 
   if (!product) errors.push(line.scan ? "Scegli il prodotto o crealo" : "Scegli il prodotto");
@@ -110,9 +117,11 @@ function parseLine(line: Line, product: Product | null): ParsedLine {
   if (priceFullCents == null) errors.push(line.price ? "Prezzo non valido" : "Inserisci il prezzo");
   if (discountCents == null) errors.push("Sconto non valido");
   if (priceFullCents != null && discountCents != null && discountCents > priceFullCents) errors.push("Lo sconto supera il prezzo");
+  if (Number.isNaN(packages)) errors.push("Confezioni: numero intero");
   if (Number.isNaN(pieces)) errors.push("Pezzi: numero intero");
   if (line.amount && amount == null) errors.push(product?.unit === "ml" ? "Quantità non valida (es. 1,5 l)" : "Peso non valido (es. 850 g, 1,2 kg)");
-  return { product, priceFullCents, discountCents, pieces: Number.isNaN(pieces) ? null : pieces, amount, errors };
+  const valid = (n: number | null) => (Number.isNaN(n) ? null : n);
+  return { product, priceFullCents, discountCents, packages: valid(packages), pieces: valid(pieces), amount, errors };
 }
 
 /**
@@ -184,7 +193,7 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
 
   const parsed = lines.map((l) => parseLine(l, l.productId != null ? (productById.get(l.productId) ?? null) : null));
   // A line left completely empty (e.g. the last "+ Aggiungi prodotto") is ignored, not an error.
-  const isBlank = (l: Line) => l.productId == null && !l.price && !l.discount && !l.pieces && !l.amount;
+  const isBlank = (l: Line) => l.productId == null && !l.price && !l.discount && !l.packages && !l.pieces && !l.amount;
   const filled = lines.map((l, i) => ({ line: l, parsed: parsed[i]! })).filter(({ line }) => !isBlank(line));
   const invalidCount = filled.filter(({ parsed: p }) => p.errors.length > 0).length;
   // Only complete lines count, so the total never silently includes half-typed ones (they're flagged instead).
@@ -234,6 +243,7 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
       items: filled.map(({ line, parsed: p }) => ({
         productId: p.product!.id,
         rawText: line.rawText,
+        packages: p.packages,
         pieces: p.pieces,
         amount: p.amount,
         priceFullCents: p.priceFullCents!,
@@ -356,7 +366,7 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
               ) : (
                 line.rawText && <p className="muted small">Sullo scontrino: {line.rawText}</p>
               )}
-              <div className="grid-3">
+              <div className="grid-4">
                 <Field label="Prezzo €">
                   <input
                     className="input"
@@ -367,7 +377,17 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
                     placeholder="0,00"
                   />
                 </Field>
-                <Field label="Pezzi">
+                <Field label="Confezioni">
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    aria-label={`Confezioni riga ${index + 1}`}
+                    value={line.packages}
+                    onChange={(e) => updateLine(line.key, { packages: e.target.value })}
+                    placeholder="1"
+                  />
+                </Field>
+                <Field label={product?.packageAmount != null || (p.packages ?? 1) > 1 ? "Pezzi per conf." : "Pezzi"}>
                   <input
                     className="input"
                     inputMode="numeric"

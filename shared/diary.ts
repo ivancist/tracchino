@@ -47,7 +47,7 @@ export function sumNutrients(list: readonly Nutrients[]): Record<Nutrient, Total
 }
 
 /** A receipt line of the product, raw (prices in cents, quantities as typed). */
-export type Purchase = { date: string; paidCents: number; pieces: number | null; amount: number | null };
+export type Purchase = { date: string; paidCents: number; packages: number | null; pieces: number | null; amount: number | null };
 
 /**
  * `average`: Σ paid / Σ quantity over the purchases of the last COST_WINDOW_DAYS up to the diary day, falling

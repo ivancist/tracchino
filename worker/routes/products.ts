@@ -41,6 +41,30 @@ function toRow(input: ParsedProduct, previous?: Pick<typeof products.$inferSelec
   return { ...values, nutritionSource };
 }
 
+const PACKAGE_PORTION = "Confezione";
+
+/**
+ * Default "Confezione" portion of a packaged product (g/ml): created when the package size is set or changes and the
+ * product has none (a name match, case-insensitive). An existing one follows the new size only if it matched the old
+ * size: one resized by hand is left alone. Diary entries keep their grams either way.
+ */
+async function syncPackagePortion(
+  d1: D1Database,
+  product: { id: number; unit: string; packageAmount: number | null },
+  previousPackageAmount: number | null | undefined,
+) {
+  if (product.packageAmount == null || product.unit === "pz" || product.packageAmount === previousPackageAmount) return;
+  const isPackage = "product_id = ?1 and lower(trim(name)) = lower(?2)";
+  await d1.batch([
+    ...(previousPackageAmount != null
+      ? [d1.prepare(`update portions set amount = ?3 where ${isPackage} and amount = ?4`).bind(product.id, PACKAGE_PORTION, product.packageAmount, previousPackageAmount)]
+      : []),
+    d1
+      .prepare(`insert into portions (product_id, name, amount) select ?1, ?2, ?3 where not exists (select 1 from portions where ${isPackage})`)
+      .bind(product.id, PACKAGE_PORTION, product.packageAmount),
+  ]);
+}
+
 async function loadProduct(env: Env, id: number): Promise<Product | null> {
   return env.DB.prepare(`${PRODUCT_SELECT} where p.id = ? group by p.id`).bind(id).first<Product>();
 }
@@ -58,6 +82,7 @@ export const productRoutes = new Hono<AppEnv>()
   .post("/", async (c) => {
     const input = await parseBody(c, productInput);
     const [row] = await getDb(c.env).insert(products).values(toRow(input)).returning({ id: products.id });
+    await syncPackagePortion(c.env.DB, { id: row!.id, unit: input.unit, packageAmount: input.packageAmount }, undefined);
     return c.json<Created>({ id: row!.id }, 201);
   })
   .patch("/:id", async (c) => {
@@ -67,6 +92,7 @@ export const productRoutes = new Hono<AppEnv>()
     const previous = await db.select().from(products).where(eq(products.id, id)).get();
     if (!previous) throw notFound("Prodotto non trovato");
     await db.update(products).set(toRow(input, previous)).where(eq(products.id, id));
+    await syncPackagePortion(c.env.DB, { id, unit: input.unit, packageAmount: input.packageAmount }, previous.packageAmount);
     return c.json<Created>({ id });
   })
   .delete("/:id", async (c) => {

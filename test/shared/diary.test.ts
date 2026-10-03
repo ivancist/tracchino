@@ -31,7 +31,13 @@ describe("sums", () => {
 
 describe("unitCost", () => {
   const pasta = { unit: "g" as const, packageAmount: 500, avgPieceAmount: null };
-  const buy = (date: string, paidCents: number, pieces: number | null, amount: number | null = null): Purchase => ({ date, paidCents, pieces, amount });
+  const buy = (date: string, paidCents: number, packages: number | null, amount: number | null = null, pieces: number | null = null): Purchase => ({
+    date,
+    paidCents,
+    packages,
+    pieces,
+    amount,
+  });
   const pastaBuys = [buy("2026-05-01", 99, 1), buy("2026-09-01", 89, 1), buy("2026-09-20", 198, 2)];
 
   it("average: Σ paid / Σ grams over the last 90 days (May is outside the window)", () => {
@@ -70,7 +76,7 @@ describe("unitCost", () => {
 
   it("flags estimated quantities (pieces × average weight)", () => {
     const bananas = { unit: "g" as const, packageAmount: null, avgPieceAmount: 120 };
-    const c = unitCost([buy("2026-09-28", 179, 6), buy("2026-09-30", 169, null, 850)], bananas, "2026-10-01", "average");
+    const c = unitCost([buy("2026-09-28", 179, null, null, 6), buy("2026-09-30", 169, null, 850)], bananas, "2026-10-01", "average");
     // 6 × 120 = 720 g estimated + 850 g weighed
     expect(c).toEqual({ paidCents: 348, amount: 1570, source: "average", purchases: 2, estimated: true });
     expect(costCents(c, 120)).toBe(27); // 120 × 348 / 1570 = 26.6
@@ -79,13 +85,13 @@ describe("unitCost", () => {
   it("never bought, or bought without a usable quantity → null (n.d.), never 0", () => {
     const loose = { unit: "g" as const, packageAmount: null, avgPieceAmount: null };
     expect(unitCost([], pasta, "2026-10-01", "average")).toBeNull();
-    expect(unitCost([buy("2026-09-30", 250, 2)], loose, "2026-10-01", "average")).toBeNull();
+    expect(unitCost([buy("2026-09-30", 250, null, null, 2)], loose, "2026-10-01", "average")).toBeNull();
     expect(costCents(null, 100)).toBeNull();
   });
 
   it("skips lines without quantity but uses the others", () => {
     const loose = { unit: "g" as const, packageAmount: null, avgPieceAmount: null };
-    expect(unitCost([buy("2026-09-30", 250, 2), buy("2026-09-29", 300, null, 1000)], loose, "2026-10-01", "average")).toMatchObject({
+    expect(unitCost([buy("2026-09-30", 250, null, null, 2), buy("2026-09-29", 300, null, 1000)], loose, "2026-10-01", "average")).toMatchObject({
       paidCents: 300,
       amount: 1000,
       purchases: 1,

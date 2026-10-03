@@ -21,7 +21,7 @@ beforeEach(async () => {
 
 const threeLines = () => [
   { productId: bananas, rawText: "BAN.CHIQ.", pieces: 6, amount: 850, priceFullCents: 199, discountCents: 20 },
-  { productId: pasta, pieces: 2, priceFullCents: 178 },
+  { productId: pasta, packages: 2, priceFullCents: 178 },
   { productId: milk, priceFullCents: 149, discountCents: 0 },
 ];
 
@@ -44,10 +44,10 @@ describe("create and read", () => {
       notes: null, // blank → null
       source: "manual",
     });
-    expect(detail.items.map((i) => [i.productName, i.pricePaidCents, i.discountCents, i.pieces, i.amount, i.rawText])).toEqual([
-      ["Banane Chiquita", 179, 20, 6, 850, "BAN.CHIQ."],
-      ["Spaghetti", 178, 0, 2, null, null],
-      ["Latte", 149, 0, null, null, null],
+    expect(detail.items.map((i) => [i.productName, i.pricePaidCents, i.discountCents, i.packages, i.pieces, i.amount, i.rawText])).toEqual([
+      ["Banane Chiquita", 179, 20, null, 6, 850, "BAN.CHIQ."],
+      ["Spaghetti", 178, 0, 2, null, null, null],
+      ["Latte", 149, 0, null, null, null, null],
     ]);
     expect(detail.items[1]).toMatchObject({ unit: "g", packageAmount: 500 });
   });
@@ -85,6 +85,8 @@ describe("validation", () => {
     ["negative price", { items: [{ productId: 1, priceFullCents: -1 }] }],
     ["price in euros (float) instead of cents", { items: [{ productId: 1, priceFullCents: 1.89 }] }],
     ["zero pieces", { items: [{ productId: 1, priceFullCents: 100, pieces: 0 }] }],
+    ["zero packages", { items: [{ productId: 1, priceFullCents: 100, packages: 0 }] }],
+    ["fractional packages", { items: [{ productId: 1, priceFullCents: 100, packages: 1.5 }] }],
   ])("rejects %s with 400 and Zod issues", async (_name, override) => {
     const res = await api.post<{ error: string; issues: unknown[] }>("/api/receipts", {
       storeId,

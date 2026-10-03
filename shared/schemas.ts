@@ -84,6 +84,7 @@ export const receiptItemInput = z
   .object({
     productId: positiveInt,
     rawText: optionalText(120),
+    packages: optionalPositiveInt,
     pieces: optionalPositiveInt,
     amount: optionalPositiveInt,
     priceFullCents: cents,

@@ -52,8 +52,12 @@ test("scontrino con 3 righe: crea negozio e prodotti, salva, compare nell'elenco
     await d.getByLabel("Confezione").fill("500 g");
   });
   await page.getByLabel("Prezzo riga 2").fill("1,78");
-  await page.getByLabel("Pezzi riga 2").fill("2");
+  await page.getByLabel("Confezioni riga 2").fill("2");
   await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/1,78\s€\/kg/);
+  // Pieces in each package don't change the weight: still 2 × 500 g
+  await page.getByLabel("Pezzi riga 2").fill("4");
+  await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/1,78\s€\/kg/);
+  await expect(page.getByTestId("receipt-line").nth(1)).toContainText(/0,22\s€\/pz/); // 178 / 8 pieces = 22.25
 
   // Line 3: milk, by volume
   await page.getByRole("button", { name: "+ Aggiungi prodotto" }).click();

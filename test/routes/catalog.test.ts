@@ -74,7 +74,7 @@ describe("stores", () => {
       storeId,
       date: "2026-09-15",
       items: [
-        { productId: a, priceFullCents: 120, discountCents: 10, pieces: 2 },
+        { productId: a, priceFullCents: 120, discountCents: 10, packages: 2, pieces: 6 },
         { productId: b, priceFullCents: 300, amount: 750 },
       ],
     });
@@ -82,8 +82,8 @@ describe("stores", () => {
 
     const prices = (await api.get<{ productId: number }[]>(`/api/stores/${storeId}/last-prices`)).body;
     expect(prices.sort((x, y) => x.productId - y.productId)).toEqual([
-      { productId: a, priceFullCents: 120, discountCents: 10, pieces: 2, amount: null, date: "2026-09-15" },
-      { productId: b, priceFullCents: 300, discountCents: 0, pieces: null, amount: 750, date: "2026-09-15" },
+      { productId: a, priceFullCents: 120, discountCents: 10, packages: 2, pieces: 6, amount: null, date: "2026-09-15" },
+      { productId: b, priceFullCents: 300, discountCents: 0, packages: null, pieces: null, amount: 750, date: "2026-09-15" },
     ]);
   });
 });

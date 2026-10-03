@@ -1,18 +1,18 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03 (righe uguali unite nella scansione)
+Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confezione")
 
 ## Riprendere da qui
 
 - **Produzione = `main` = `9e3e7f1`** (versione Worker `561d182a`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
-- Migrazioni applicate in produzione: `0000`…`0004` (ultime: `0003_fiber_saturated`, `0004_salt`). Backup pre-migrazione in `backups/` (gitignored).
+- Migrazioni applicate in produzione: `0000`…`0004` (ultime: `0003_fiber_saturated`, `0004_salt`). **`0005_packages` pronta, non ancora in produzione** (vedi sotto). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–6 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
   - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
   - porzioni: una voce salvata conserva il peso della porzione di allora.
+- Prove reali dall'iPhone (scansione scontrino, barcode): **fatte dall'utente** (2026-10-03).
 - Ancora aperto (dettagli in fondo):
-  - prove reali dell'utente dall'iPhone (scansione scontrino; barcode con zxing);
   - più scontrini per l'eval;
   - Workers AI rimandato;
   - bundle > 500 kB (facoltativo).
@@ -256,7 +256,7 @@ Segnalazione dell'utente sullo scontrino `eurospin-1`: passata e ceci comparivan
 - `worker/services/scan-lines.ts`:
   - `attachQuantityLines`: il modello trascrive la riga di quantità come voce a sé (`kind: "quantity"`, `unitPriceCents`), il Worker la aggancia al prodotto sotto, poi a quello sopra, solo se il conto torna;
   - `fixPieces`: pezzi con prezzo unitario che non torna → spostati sulla riga vicina che torna, oppure scartati; poi `piecesHint`;
-  - `mergeDuplicateLines`: stessa chiave `normalizeRawText` → una riga sola (importi, sconti e pezzi sommati).
+  - `mergeDuplicateLines`: stessa chiave `normalizeRawText` → una riga sola (importi e sconti sommati; i pezzi sommati sono stati poi corretti in confezioni, vedi sotto).
 - Causa trovata con l'output grezzo: il modello leggeva "2 PZ x" come seguito del tonno e da lì **spostava di una riga tutti i prezzi successivi** (eval: prezzi 51%). Chiedere nel prompt di "verificare il conto" non bastava; trascrivere la riga a parte sì.
 - Eval: i pezzi in più ora contano come errore (prima no), metrica `merged` (righe unite uguali alla verità unita), output grezzo e negozio letto salvati nel risultato.
   - Risultato `gemini-3.5-flash-lite`: 100% su prezzi, pezzi, righe unite, prodotti, alias e totale; eurospin ripetuto 3 volte, sempre 100%.
@@ -264,10 +264,25 @@ Segnalazione dell'utente sullo scontrino `eurospin-1`: passata e ceci comparivan
 - Test: `test/services/scan-lines.test.ts` (13), caso Eurospin in `test/routes/scan.test.ts`. Mutazioni (aggancio senza conto, nessuna unione) rilevate.
 - Scala `verify` verde: 405 test, 52 e2e, build, segreti, config, migrazioni. Nessuna migrazione.
 
+## Confezioni distinte dai pezzi e porzione "Confezione" (2026-10-03)
+
+Correzione chiesta dall'utente dopo la versione precedente (sopra), che sommava le righe uguali nei **pezzi**: "confezioni e pezzi sono due cose diverse; 2 confezioni di uova sono 2 confezioni da 6 pezzi".
+- I dati di produzione lo confermavano: "Carote bio 500 g" con 6 pezzi e "Scalogno 250 g" con 8 pezzi erano pezzi nella confezione, ma l'app li leggeva come confezioni (3 kg e 2 kg).
+- Migrazione `0005_packages` (solo additiva):
+  - colonna `receipt_items.packages`;
+  - righe degli scontrini scansionati → 1 confezione, i pezzi restano;
+  - righe manuali di prodotti confezionati → i vecchi pezzi diventano confezioni;
+  - porzione "Confezione" per i prodotti g/ml confezionati che non ce l'hanno.
+  - Provata su una copia dei dati di produzione (schema 0000–0004 + export dei dati): 40 righe e 38 voci di diario invariate, tutte le righe a 1 confezione con i loro pezzi, 27 prodotti confezionati con una sola "Confezione" (22 nuove + 5 dell'utente), nessun doppione.
+- `shared/pricing.ts`: `totalPieces` = confezioni × pezzi; peso = confezioni × peso della confezione (i pezzi non lo cambiano); €/pz sui pezzi totali. Statistiche, diario e analisi passano dallo stesso calcolo.
+- Scansione: il modello restituisce `quantity` (righe "2 PZ x" o "2 X 1,29") → confezioni; pezzi per confezione solo da `piecesHint`; le righe uguali sommano le confezioni.
+- UI: riga dello scontrino con Prezzo, Confezioni, Pezzi (per conf.), Peso (2 × 2 su telefono); elenco acquisti "2 conf. × 6 pz".
+- Porzione "Confezione" automatica (`syncPackagePortion` in `worker/routes/products.ts`): alla creazione, o quando il peso della confezione cambia; segue il nuovo peso solo se coincideva col vecchio.
+- Test: 416 Vitest (nuovi `test/routes/package-portion.test.ts`, `totalPieces`, carote 1 × 500 g con 6 pezzi, uova 2 × 6 per negozio), 52 e2e (confezioni e pezzi nella revisione e nel salvato, uova 2 × 6, porzione "Confezione" nel diario). Mutazioni (peso × pezzi, unione che somma i pezzi) rilevate.
+- Eval reale ×2: 100% su prezzi, confezioni/pezzi, righe unite, prodotti, alias, totale.
+
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
-1. Prove reali dell'utente dal telefono:
-   - scansione di uno scontrino (revisione, salvataggio, foto nel dettaglio);
-   - barcode con la fotocamera dell'iPhone (fallback zxing).
+1. Applicare `0005_packages` in produzione (con l'ok dell'utente; backup `backups/d1-2026-10-03-pre-0005.sql` già fatto) e fare il deploy.
 2. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
 3. Workers AI come riserva della scansione: rimandato (PLAN §5).
 4. Facoltativo: il bundle principale supera i 500 kB (warning di Vite); si può dividere per pagina con `lazy` nelle route.

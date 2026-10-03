@@ -27,12 +27,13 @@ function itemStatements(d1: D1Database, items: ReceiptBody["items"], receiptId: 
   return items.map((item) => {
     const stmt = d1.prepare(
       `insert into receipt_items
-         (receipt_id, product_id, raw_text, pieces, amount, price_full_cents, discount_cents, price_paid_cents)
-       values (${receiptIdSql}, ?, ?, ?, ?, ?, ?, ?)`,
+         (receipt_id, product_id, raw_text, packages, pieces, amount, price_full_cents, discount_cents, price_paid_cents)
+       values (${receiptIdSql}, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const values = [
       item.productId,
       item.rawText,
+      item.packages,
       item.pieces,
       item.amount,
       item.priceFullCents,
@@ -97,7 +98,7 @@ export const receiptRoutes = new Hono<AppEnv>()
     const { results: items } = await c.env.DB.prepare(
       `select ri.id, ri.product_id as productId, p.name as productName, p.brand as productBrand, p.unit,
               p.package_amount as packageAmount, p.avg_piece_amount as avgPieceAmount,
-              ri.raw_text as rawText, ri.pieces, ri.amount, ri.price_full_cents as priceFullCents,
+              ri.raw_text as rawText, ri.packages, ri.pieces, ri.amount, ri.price_full_cents as priceFullCents,
               ri.discount_cents as discountCents, ri.price_paid_cents as pricePaidCents
          from receipt_items ri
          join products p on p.id = ri.product_id

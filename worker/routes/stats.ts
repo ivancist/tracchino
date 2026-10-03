@@ -17,7 +17,7 @@ const PURCHASES_SELECT = `
   select ri.receipt_id as receiptId, ri.product_id as productId, p.name as productName,
          p.unit, p.package_amount as packageAmount, p.avg_piece_amount as avgPieceAmount,
          r.date, r.store_id as storeId, s.name as storeName, ch.name as chainName,
-         ri.pieces, ri.amount, ri.price_full_cents as priceFullCents, ri.discount_cents as discountCents,
+         ri.packages, ri.pieces, ri.amount, ri.price_full_cents as priceFullCents, ri.discount_cents as discountCents,
          ri.price_paid_cents as pricePaidCents
     from receipt_items ri
     join receipts r on r.id = ri.receipt_id

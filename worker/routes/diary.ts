@@ -71,7 +71,7 @@ export const diaryRoutes = new Hono<AppEnv>()
       ? await db
           .prepare(
             `select ri.product_id as productId, r.date, ri.price_full_cents - ri.discount_cents as paidCents,
-                    ri.pieces, ri.amount
+                    ri.packages, ri.pieces, ri.amount
                from receipt_items ri join receipts r on r.id = ri.receipt_id
               where ri.product_id in (select value from json_each(?))`,
           )

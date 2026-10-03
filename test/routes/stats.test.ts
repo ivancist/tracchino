@@ -24,10 +24,10 @@ beforeEach(async () => {
   // Hand-computed fixture
   await api.receipt({ storeId: esselunga, date: "2026-09-01", items: [
     { productId: banChiquita, priceFullCents: 199, discountCents: 20, pieces: 6, amount: 850 }, // 179
-    { productId: pasta, priceFullCents: 89, pieces: 1 }, // 89
+    { productId: pasta, priceFullCents: 89, packages: 1 }, // 89
   ] }); // day total 268
   await api.receipt({ storeId: lidl, date: "2026-09-03", items: [{ productId: banLidl, priceFullCents: 129, amount: 700 }] }); // 129
-  await api.receipt({ storeId: esselunga, date: "2026-09-03", items: [{ productId: pasta, priceFullCents: 178, pieces: 2 }] }); // 178 → day 307
+  await api.receipt({ storeId: esselunga, date: "2026-09-03", items: [{ productId: pasta, priceFullCents: 178, packages: 2 }] }); // 178 → day 307
   await api.receipt({ storeId: esselunga, date: "2026-09-15", items: [{ productId: banChiquita, priceFullCents: 150, pieces: 5 }] }); // 150
 });
 

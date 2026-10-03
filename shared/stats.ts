@@ -1,5 +1,5 @@
 import { addDays, eachDay, weekStart } from "./dates";
-import { resolveAmount, type ProductQuantityInfo } from "./pricing";
+import { resolveAmount, totalPieces, type ProductQuantityInfo } from "./pricing";
 
 /** Arithmetic mean rounded to the cent; null for no data. */
 export function mean(values: readonly number[]): number | null {
@@ -68,6 +68,7 @@ export type PurchaseLine = ProductQuantityInfo & {
   storeId: number;
   storeName: string;
   chainName: string;
+  packages: number | null;
   pieces: number | null;
   amount: number | null;
   pricePaidCents: number;
@@ -81,7 +82,7 @@ export type StorePriceStats = {
   lastDate: string;
   /** Total paid / total quantity over lines with a known quantity; `estimated` if any of them was estimated. */
   perKilo: { cents: number; estimated: boolean; lines: number } | null;
-  /** Total paid / total pieces over lines with pieces. */
+  /** Total paid / total pieces (packages × pieces) over lines with pieces. */
   perPiece: { cents: number; lines: number } | null;
   lastPaidCents: number;
 };
@@ -120,9 +121,10 @@ export function priceStatsByStore(
         linesK++;
         if (resolved.source === "estimated") estimated = true;
       }
-      if (l.pieces != null && l.pieces > 0) {
+      const n = totalPieces(l);
+      if (n != null && n > 0) {
         paidP += l.pricePaidCents;
-        pieces += l.pieces;
+        pieces += n;
         linesP++;
       }
     }

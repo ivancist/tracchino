@@ -24,6 +24,7 @@ function fixture(tag: string, vat: string, ids: Awaited<ReturnType<typeof seed>>
   const line = (l: Partial<ScanResult["lines"][number]> & Pick<ScanResult["lines"][number], "rawText" | "priceCents" | "status">) => ({
     rawTextNorm: l.rawText,
     discountCents: 0,
+    packages: 1,
     pieces: null,
     amount: null,
     productId: null,
@@ -38,7 +39,7 @@ function fixture(tag: string, vat: string, ids: Awaited<ReturnType<typeof seed>>
     date: todayRome(), // newest first: today's receipt is on the first page of the list
     totalCents: 149 + 120 + 250 - 50 + 199,
     lines: [
-      line({ rawText: "LATTE INT 1L", priceCents: 149, status: "alias", productId: ids.milk }),
+      line({ rawText: "LATTE INT 1L", priceCents: 149, status: "alias", productId: ids.milk, packages: 2 }),
       line({ rawText: "BANANE", priceCents: 120, status: "proposed", productId: ids.bananas, amount: 856 }),
       line({ rawText: "PANE ARAB", priceCents: 250, discountCents: 50, status: "uncertain", productId: ids.bread }),
       line({ rawText: "UOVA XL 6P", priceCents: 199, status: "none", pieces: 6, suggestedName: `Uova ${tag}` }),
@@ -101,6 +102,10 @@ test("scansione: revisione con stati, conferma obbligatoria, nuovo negozio e pro
   const statuses = page.getByTestId("match-status");
   await expect(statuses).toHaveText(["Riconosciuto", "Proposto", "Incerto", "Nuovo prodotto"]);
   await expect(lines.nth(0)).toContainText("Sullo scontrino: LATTE INT 1L");
+  // Packages and pieces are separate: 2 cartons of milk; 1 pack of 6 eggs.
+  await expect(page.getByLabel("Confezioni riga 1")).toHaveValue("2");
+  await expect(page.getByLabel("Pezzi riga 1")).toHaveValue("");
+  await expect(page.getByLabel("Confezioni riga 4")).toHaveValue("1");
   await expect(page.getByLabel("Pezzi riga 4")).toHaveValue("6");
   await expect(page.getByLabel("Quantità riga 2")).toHaveValue("856");
   await expect(page.getByLabel("Sconto riga 3")).toHaveValue("0,50");
@@ -158,7 +163,8 @@ test("scansione: revisione con stati, conferma obbligatoria, nuovo negozio e pro
     ["PANE ARAB", ids.bread],
     ["UOVA XL 6P", expect.any(Number)],
   ]);
-  expect(detail.items[3]).toMatchObject({ pieces: 6, productName: `Uova ${tag}` });
+  expect(detail.items[0]).toMatchObject({ packages: 2, pieces: null });
+  expect(detail.items[3]).toMatchObject({ packages: 1, pieces: 6, productName: `Uova ${tag}` });
   const photo = await request.get(`/api/receipts/${saved!.id}/photo`);
   expect(photo.status()).toBe(200);
   expect(photo.headers()["content-type"]).toBe(uploaded.headers()["content-type"]);

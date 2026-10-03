@@ -143,6 +143,9 @@ export const receiptItems = sqliteTable(
       .notNull()
       .references(() => products.id, { onDelete: "restrict" }),
     rawText: text("raw_text"),
+    /** Packages bought (2 jars of passata); null = not stated, assumed 1. Validated > 0 in Zod (migration 0005 is additive). */
+    packages: integer("packages"),
+    /** Pieces in each package (eggs 6P → 6), or loose pieces (6 bananas). Total pieces = packages × pieces. */
     pieces: integer("pieces"),
     amount: integer("amount"),
     priceFullCents: integer("price_full_cents").notNull(),

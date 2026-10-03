@@ -61,7 +61,7 @@ const line = (rawText: string, priceCents: number, extra: Partial<ExtractedRecei
   rawText,
   priceCents,
   discountCents: 0,
-  pieces: null,
+  quantity: null,
   unitPriceCents: null,
   amountGrams: null,
   ...extra,
@@ -86,9 +86,9 @@ describe("POST /api/receipts/scan", () => {
     const scan = (await res.json()) as ScanResult;
 
     expect(scan.store).toMatchObject({ storeId: esselunga, status: "vat" });
-    expect(scan.lines.map((l) => [l.rawTextNorm, l.productId, l.status, l.pieces, l.discountCents])).toEqual([
-      ["BAN.CHIQ", bananas, "proposed", null, 20],
-      ["UOVA FRESCHE 6P", eggs, "proposed", 6, 0],
+    expect(scan.lines.map((l) => [l.rawTextNorm, l.productId, l.status, l.packages, l.pieces, l.discountCents])).toEqual([
+      ["BAN.CHIQ", bananas, "proposed", 1, null, 20],
+      ["UOVA FRESCHE 6P", eggs, "proposed", 1, 6, 0],
     ]);
     expect(scan.aiMatching).toBe(true);
     expect(calls.extract).toBe(1);
@@ -107,18 +107,19 @@ describe("POST /api/receipts/scan", () => {
         line("PASSATA POMOD. 700", 85),
         line("TONNO NATURALE 160", 119),
         line("TONNO NATURALE 160", 119),
-        line("2 PZ x 1,99 EUR/PZ", 0, { kind: "quantity", pieces: 2, unitPriceCents: 199 }),
+        line("2 PZ x 1,99 EUR/PZ", 0, { kind: "quantity", quantity: 2, unitPriceCents: 199 }),
         line("SGOMBRI GR.NAT.120", 398),
         line("UOVA A TERRA XL 6P", 199),
       ]),
     );
     const scan = (await (await (await appWith(ai))("/api/receipts/scan", JPEG, "image/jpeg")).res.json()) as ScanResult;
-    expect(scan.lines.map((l) => [l.rawText, l.priceCents, l.pieces])).toEqual([
-      ["PASSATA POMOD. 700", 170, 2],
-      ["CECI 400g", 98, 2],
-      ["TONNO NATURALE 160", 238, 2],
-      ["SGOMBRI GR.NAT.120", 398, 2],
-      ["UOVA A TERRA XL 6P", 199, 6],
+    // [text, amount, packages, pieces per package]
+    expect(scan.lines.map((l) => [l.rawText, l.priceCents, l.packages, l.pieces])).toEqual([
+      ["PASSATA POMOD. 700", 170, 2, null],
+      ["CECI 400g", 98, 2, null],
+      ["TONNO NATURALE 160", 238, 2, null],
+      ["SGOMBRI GR.NAT.120", 398, 2, null],
+      ["UOVA A TERRA XL 6P", 199, 1, 6],
     ]);
     expect(scan.lines.reduce((s, l) => s + l.priceCents, 0)).toBe(scan.totalCents);
     expect(calls.choose[0]!.lines.map((l) => l.index)).toEqual([0, 1, 2, 3, 4]);

@@ -54,6 +54,7 @@ export type LastPrice = {
   productId: number;
   priceFullCents: number;
   discountCents: number;
+  packages: number | null;
   pieces: number | null;
   amount: number | null;
   date: string;
@@ -80,6 +81,7 @@ export type ReceiptItem = {
   packageAmount: number | null;
   avgPieceAmount: number | null;
   rawText: string | null;
+  packages: number | null;
   pieces: number | null;
   amount: number | null;
   priceFullCents: number;
@@ -210,6 +212,9 @@ export type ScanLine = {
   rawTextNorm: string;
   priceCents: number;
   discountCents: number;
+  /** Packages bought: merged identical lines and "2 PZ x" quantity rows add up. */
+  packages: number;
+  /** Pieces in each package, when printed ("UOVA 6P" → 6). */
   pieces: number | null;
   amount: number | null;
   productId: number | null;
