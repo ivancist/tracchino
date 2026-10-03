@@ -71,6 +71,9 @@ export const products = sqliteTable(
     fat100: real("fat_100"),
     carbs100: real("carbs_100"),
     sugars100: real("sugars_100"),
+    // Added later as plain nullable columns (no CHECK: that would rebuild a table other tables cascade from)
+    saturatedFat100: real("saturated_fat_100"),
+    fiber100: real("fiber_100"),
     nutritionSource: text("nutrition_source", { enum: NUTRITION_SOURCES }),
     createdAt: createdAt(),
   },

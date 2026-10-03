@@ -34,7 +34,9 @@ async function seed(request: APIRequestContext, tag: string, day: string) {
     kcal100: 359,
     protein100: 12.5,
     fat100: 2,
+    saturatedFat100: 0.4,
     carbs100: 71,
+    fiber100: 3,
   });
   const banana = await post("/api/products", { name: `Banane ${tag}`, unit: "g", avgPieceAmount: 120, kcal100: 89, protein100: 1.1 });
   const olio = await post("/api/products", { name: `Olio ${tag}`, unit: "ml", kcal100: 822 }); // never bought
@@ -105,6 +107,10 @@ test("diario: grammi e porzioni, totali con costo stimato, n.d. per i prodotti m
   await expect(page.getByTestId("total-cost")).toContainText("1 voce senza dato");
   // Protein: 10 + 1.98 = 11.98 g, oil has none
   await expect(page.getByTestId("total-protein")).toContainText("≥ 12 g");
+  // Fibre and saturated fat only known for the pasta: 3 × 0.8 = 2.4 g, 0.4 × 0.8 = 0.32 g
+  await expect(page.getByTestId("total-fiber")).toContainText("≥ 2,4 g");
+  await expect(page.getByTestId("total-fiber")).toContainText("2 voci senza dato");
+  await expect(page.getByTestId("total-saturated")).toContainText("≥ 0,3 g");
 
   // Edit lunch to 100 g, then delete it
   await lunch.getByTestId("diary-entry").click();

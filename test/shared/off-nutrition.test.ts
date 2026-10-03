@@ -44,6 +44,8 @@ describe("nutritionWarnings", () => {
     fat100: null,
     carbs100: null,
     sugars100: null,
+    saturatedFat100: null,
+    fiber100: null,
     ...v,
   });
 
@@ -63,11 +65,25 @@ describe("nutritionWarnings", () => {
 
   it("flags impossible macros", () => {
     expect(nutritionWarnings(n({ protein100: 60, fat100: 30, carbs100: 20 }))).toEqual([
-      "Proteine + grassi + carboidrati superano 100 g per 100 g",
+      "Proteine, grassi, carboidrati e fibre insieme superano 100 g per 100 g",
     ]);
     expect(nutritionWarnings(n({ protein100: 120 }))).toEqual(["Un macronutriente supera 100 g per 100 g"]);
     expect(nutritionWarnings(n({ carbs100: 10, sugars100: 12 }))).toEqual(["Gli zuccheri superano i carboidrati"]);
     expect(nutritionWarnings(n({ carbs100: 10, sugars100: 10.5 }))).toEqual([]); // rounding on labels
+  });
+
+  it("saturated fat is part of fat; fibre counts in the sum and at 2 kcal/g", () => {
+    expect(nutritionWarnings(n({ fat100: 10, saturatedFat100: 12 }))).toEqual(["I grassi saturi superano i grassi"]);
+    expect(nutritionWarnings(n({ fat100: 10, saturatedFat100: 10.5 }))).toEqual([]);
+    expect(nutritionWarnings(n({ protein100: 30, fat100: 30, carbs100: 30, fiber100: 15 }))).toEqual([
+      "Proteine, grassi, carboidrati e fibre insieme superano 100 g per 100 g",
+    ]);
+    // Wholemeal pasta: 4·13 + 9·2.5 + 4·64 + 2·7 = 344.5 kcal (without fibre it would be 330.5)
+    const base = { protein100: 13, fat100: 2.5, carbs100: 64, fiber100: 7 };
+    expect(nutritionWarnings(n({ ...base, kcal100: 345 }))).toEqual([]);
+    // Tolerance: 20% of 344.5 = 68.9 kcal → 276 (68.5 away) passes, 275 (69.5 away) is flagged
+    expect(nutritionWarnings(n({ ...base, kcal100: 276 }))).toEqual([]);
+    expect(nutritionWarnings(n({ ...base, kcal100: 275 }))).toEqual(["Le kcal (275) non tornano con i macronutrienti (≈ 345 kcal)"]);
   });
 
   it("skips the kcal check when a macro is missing", () => {
@@ -92,9 +108,14 @@ describe("mapOffProduct", () => {
       brand: "Mutti",
       unit: "g",
       packageAmount: 700,
-      nutrition: { kcal100: 36, protein100: 1.6, fat100: 0.2, carbs100: 6.2, sugars100: 4.5 },
+      nutrition: { kcal100: 36, protein100: 1.6, fat100: 0.2, carbs100: 6.2, sugars100: 4.5, saturatedFat100: null, fiber100: null },
       warnings: [],
     });
+  });
+
+  it("maps saturated fat and fibre", () => {
+    const p = mapOffProduct("1", { nutriments: { fat_100g: 30.9, "saturated-fat_100g": "10,6", fiber_100g: 0 } });
+    expect(p.nutrition).toMatchObject({ fat100: 30.9, saturatedFat100: 10.6, fiber100: 0 }); // 0 fibre is a real value
   });
 
   it("handles a product with nothing but its barcode", () => {
@@ -104,7 +125,7 @@ describe("mapOffProduct", () => {
       brand: null,
       unit: "g",
       packageAmount: null,
-      nutrition: { kcal100: null, protein100: null, fat100: null, carbs100: null, sugars100: null },
+      nutrition: { kcal100: null, protein100: null, fat100: null, carbs100: null, sugars100: null, saturatedFat100: null, fiber100: null },
       warnings: [],
     });
   });

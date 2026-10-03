@@ -9,7 +9,7 @@ export const MEALS = ["colazione", "pranzo", "cena", "snack"] as const;
 export type Meal = (typeof MEALS)[number];
 export const MEAL_LABELS: Record<Meal, string> = { colazione: "Colazione", pranzo: "Pranzo", cena: "Cena", snack: "Spuntini" };
 
-export const NUTRIENTS = ["kcal", "protein", "fat", "carbs", "sugars"] as const;
+export const NUTRIENTS = ["kcal", "protein", "fat", "saturatedFat", "carbs", "sugars", "fiber"] as const;
 export type Nutrient = (typeof NUTRIENTS)[number];
 export type Nutrients = Record<Nutrient, number | null>;
 
@@ -19,6 +19,8 @@ const PER_100: Record<Nutrient, keyof Nutrition> = {
   fat: "fat100",
   carbs: "carbs100",
   sugars: "sugars100",
+  saturatedFat: "saturatedFat100",
+  fiber: "fiber100",
 };
 
 /** Nutrients in `amount` g/ml of a product whose values are per 100 g/ml. */

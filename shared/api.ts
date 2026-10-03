@@ -41,6 +41,8 @@ export type Product = {
   fat100: number | null;
   carbs100: number | null;
   sugars100: number | null;
+  saturatedFat100: number | null;
+  fiber100: number | null;
   nutritionSource: "off" | "manual" | null;
   purchaseCount: number;
   lastPurchaseDate: string | null;

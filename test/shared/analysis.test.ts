@@ -9,10 +9,10 @@ const RISO = 2;
 const BANANA = 3;
 const OLIO = 4;
 const nutrition: Record<number, Nutrition> = {
-  [PASTA]: { kcal100: 359, protein100: 12.5, fat100: 2, carbs100: 71, sugars100: 3.5 },
-  [RISO]: { kcal100: 350, protein100: 7, fat100: 0.6, carbs100: 78, sugars100: 0.2 },
-  [BANANA]: { kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8, sugars100: null },
-  [OLIO]: { kcal100: 822, protein100: null, fat100: null, carbs100: null, sugars100: null },
+  [PASTA]: { kcal100: 359, protein100: 12.5, fat100: 2, carbs100: 71, sugars100: 3.5, saturatedFat100: 0.4, fiber100: 3 },
+  [RISO]: { kcal100: 350, protein100: 7, fat100: 0.6, carbs100: 78, sugars100: 0.2, saturatedFat100: 0.2, fiber100: 1.4 },
+  [BANANA]: { kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8, sugars100: null, saturatedFat100: null, fiber100: 2.6 },
+  [OLIO]: { kcal100: 822, protein100: null, fat100: null, carbs100: null, sugars100: null, saturatedFat100: null, fiber100: null },
 };
 const unit = (paidCents: number, amount: number, estimated = false): UnitCost => ({ paidCents, amount, source: "average", purchases: 1, estimated });
 const costs: Record<number, UnitCost | null> = {
@@ -53,7 +53,7 @@ describe("dietSummary", () => {
     const s = dietSummary([], nut, cost);
     expect(s).toEqual({
       days: [],
-      dailyMean: { cost: null, kcal: null, protein: null, fat: null, carbs: null, sugars: null },
+      dailyMean: { cost: null, kcal: null, protein: null, fat: null, saturatedFat: null, carbs: null, sugars: null, fiber: null },
       weeklyCostEstimate: null,
       costPer100Kcal: null,
       entriesWithoutCost: 0,
@@ -74,7 +74,7 @@ describe("nutrientValue", () => {
     // Unknown cost or nutrient, or 0 kcal (water) → null
     expect(nutrientValue(nutrition[OLIO]!, null)).toEqual({ per100KcalCents: null, per10gProteinCents: null });
     expect(nutrientValue({ ...nutrition[OLIO]! }, unit(500, 1000)).per10gProteinCents).toBeNull();
-    expect(nutrientValue({ kcal100: 0, protein100: 0, fat100: 0, carbs100: 0, sugars100: 0 }, unit(30, 1500))).toEqual({
+    expect(nutrientValue({ kcal100: 0, protein100: 0, fat100: 0, carbs100: 0, sugars100: 0, saturatedFat100: 0, fiber100: 0 }, unit(30, 1500))).toEqual({
       per100KcalCents: null,
       per10gProteinCents: null,
     });
@@ -85,7 +85,7 @@ describe("simulate", () => {
   it("replacing A with A changes nothing", () => {
     const s = simulate(diary, { fromProductId: PASTA, toProductId: PASTA, factor: 1 }, nut, cost);
     expect(s.affectedEntries).toBe(2);
-    expect(s.delta).toEqual({ cost: 0, kcal: 0, protein: 0, fat: 0, carbs: 0, sugars: 0 });
+    expect(s.delta).toEqual({ cost: 0, kcal: 0, protein: 0, fat: 0, saturatedFat: 0, carbs: 0, sugars: 0, fiber: 0 });
   });
 
   it("pasta → rice, same grams", () => {
@@ -98,6 +98,8 @@ describe("simulate", () => {
     expect(s.delta.kcal).toBeCloseTo(-16.2, 10);
     expect(s.delta.protein).toBeCloseTo(-9.9, 10);
     expect(s.delta.sugars).toBeCloseTo(0.36 - 6.3, 10);
+    // Fibre: pasta 2.4 + 3 = 5.4 g → rice 1.12 + 1.4 = 2.52 g: −2.88
+    expect(s.delta.fiber).toBeCloseTo(-2.88, 10);
     expect(s.affectedDays).toBe(2);
   });
 

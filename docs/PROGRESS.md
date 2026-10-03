@@ -205,6 +205,16 @@ Ultimo aggiornamento: 2026-10-03 (Fase 6)
 ### In produzione (2026-10-03)
 - Fast-forward di `main` a `334df0d`, deploy; smoke test senza login (`/statistiche`, `/api/analysis`, `/api/analysis/simulate`) → 302.
 
+## Fibre e grassi saturi (branch `fiber-saturated`, 2026-10-03)
+
+- Migrazione `0003_fiber_saturated`: due colonne nullable `saturated_fat_100`, `fiber_100` su `products`. Solo `ALTER TABLE ADD`, senza CHECK (un CHECK ricostruirebbe `products`, da cui `portions` dipende in CASCADE); la validazione 0–100 è in Zod. Applicata in locale; **in produzione serve l'ok dell'utente** (backup → `db:migrate:remote` → deploy).
+- Ovunque: form prodotto ("di cui saturi", "Fibre"), mapping OFF (`saturated-fat_100g`, `fiber_100g`), unione di prodotti, diario (riquadri e totali), analisi e simulazione.
+- Plausibilità:
+  - saturi ≤ grassi (+0,5 g);
+  - le fibre entrano nella somma ≤ 100 g;
+  - kcal stimate con 2 kcal/g di fibre (UE), solo se le fibre sono note.
+- Test: 381 Vitest, 50 e2e verdi.
+
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Prove reali dell'utente dal telefono:
    - scansione di uno scontrino (revisione, salvataggio, foto nel dettaglio);

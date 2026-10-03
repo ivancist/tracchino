@@ -1,4 +1,4 @@
-import { costCents, NUTRIENTS, nutrientsFor, sumKnown, type Nutrient, type Total, type UnitCost } from "./diary";
+import { costCents, NUTRIENTS, nutrientsFor, sumKnown, type Nutrient, type Nutrients, type Total, type UnitCost } from "./diary";
 import type { Nutrition } from "./nutrition";
 import { resolveAmount, type ProductQuantityInfo } from "./pricing";
 
@@ -16,7 +16,7 @@ export const MEASURES: readonly Measure[] = ["cost", ...NUTRIENTS];
 
 function entryValues(row: DiaryRow, amount: number, productId: number, nutrition: NutritionLookup, cost: CostLookup) {
   const n = nutrition(productId);
-  const nutrients = n ? nutrientsFor(n, amount) : { kcal: null, protein: null, fat: null, carbs: null, sugars: null };
+  const nutrients = n ? nutrientsFor(n, amount) : (Object.fromEntries(NUTRIENTS.map((k) => [k, null])) as Nutrients);
   return { ...nutrients, cost: costCents(cost(productId, row.date), amount) } as Record<Measure, number | null>;
 }
 

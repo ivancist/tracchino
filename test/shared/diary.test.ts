@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MEALS as DB_MEALS } from "../../db/schema";
 import { costCents, MEALS, nutrientsFor, portionAmount, sumKnown, sumNutrients, unitCost, type Purchase } from "../../shared/diary";
 
-const banana = { kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8, sugars100: null };
+const banana = { kcal100: 89, protein100: 1.1, fat100: 0.3, carbs100: 22.8, sugars100: null, saturatedFat100: 0.1, fiber100: 2.6 };
 
 describe("nutrientsFor", () => {
   it("scales per-100 values to the amount eaten; unknown stays null", () => {
@@ -12,6 +12,8 @@ describe("nutrientsFor", () => {
     expect(n.fat).toBeCloseTo(0.36, 10);
     expect(n.carbs).toBeCloseTo(27.36, 10);
     expect(n.sugars).toBeNull();
+    expect(n.fiber).toBeCloseTo(3.12, 10); // 2.6 × 1.2
+    expect(n.saturatedFat).toBeCloseTo(0.12, 10);
   });
 });
 

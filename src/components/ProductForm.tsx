@@ -15,8 +15,10 @@ const NUTRIENTS = [
   ["kcal100", "kcal"],
   ["protein100", "Proteine (g)"],
   ["fat100", "Grassi (g)"],
+  ["saturatedFat100", "di cui saturi (g)"],
   ["carbs100", "Carboidrati (g)"],
   ["sugars100", "di cui zuccheri (g)"],
+  ["fiber100", "Fibre (g)"],
 ] as const;
 
 const NEW_GROUP = "__new__";

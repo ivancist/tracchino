@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Created, Product } from "../../shared/api";
+import { NUTRITION_KEYS as NUTRITION_KEY_LIST } from "../../shared/nutrition";
 import { mergeInput, productInput } from "../../shared/schemas";
 import type { AppEnv } from "../app";
 import { getDb, schema } from "../db";
@@ -12,14 +13,15 @@ const PRODUCT_SELECT = `
   select p.id, p.name, p.brand, p.group_id as groupId, g.name as groupName, p.barcode, p.unit,
          p.package_amount as packageAmount, p.avg_piece_amount as avgPieceAmount,
          p.kcal_100 as kcal100, p.protein_100 as protein100, p.fat_100 as fat100,
-         p.carbs_100 as carbs100, p.sugars_100 as sugars100, p.nutrition_source as nutritionSource,
+         p.carbs_100 as carbs100, p.sugars_100 as sugars100,
+         p.saturated_fat_100 as saturatedFat100, p.fiber_100 as fiber100, p.nutrition_source as nutritionSource,
          count(ri.id) as purchaseCount, max(r.date) as lastPurchaseDate
     from products p
     left join product_groups g on g.id = p.group_id
     left join receipt_items ri on ri.product_id = p.id
     left join receipts r on r.id = ri.receipt_id`;
 
-const NUTRITION_KEYS = ["kcal100", "protein100", "fat100", "carbs100", "sugars100"] as const;
+const NUTRITION_KEYS = NUTRITION_KEY_LIST;
 type NutritionKey = (typeof NUTRITION_KEYS)[number];
 
 type ParsedProduct = ReturnType<typeof productInput.parse>;
@@ -108,7 +110,8 @@ export const productRoutes = new Hono<AppEnv>()
       d1
         .prepare(
           `update products set brand = ?, barcode = ?, package_amount = ?, avg_piece_amount = ?, group_id = ?,
-                  kcal_100 = ?, protein_100 = ?, fat_100 = ?, carbs_100 = ?, sugars_100 = ?, nutrition_source = ?
+                  kcal_100 = ?, protein_100 = ?, fat_100 = ?, carbs_100 = ?, sugars_100 = ?,
+                  saturated_fat_100 = ?, fiber_100 = ?, nutrition_source = ?
             where id = ?`,
         )
         .bind(
@@ -122,6 +125,8 @@ export const productRoutes = new Hono<AppEnv>()
           nutrition.fat100,
           nutrition.carbs100,
           nutrition.sugars100,
+          nutrition.saturatedFat100,
+          nutrition.fiber100,
           nutrition.nutritionSource,
           intoId,
         ),

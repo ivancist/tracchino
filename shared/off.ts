@@ -97,6 +97,8 @@ export function mapOffProduct(barcode: string, p: OffRawProduct): OffPrefill {
     fat100: keep(num(n.fat_100g), 100, "Grassi", 1),
     carbs100: keep(num(n.carbohydrates_100g), 100, "Carboidrati", 1),
     sugars100: keep(num(n.sugars_100g), 100, "Zuccheri", 1),
+    saturatedFat100: keep(num(n["saturated-fat_100g"]), 100, "Grassi saturi", 1),
+    fiber100: keep(num(n.fiber_100g), 100, "Fibre", 1),
   };
   const size = packageSize(p);
   const brand = typeof p.brands === "string" ? text(p.brands.split(",")[0], 80) : null;

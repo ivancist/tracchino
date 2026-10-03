@@ -67,6 +67,8 @@ export const productInput = z.object({
   fat100: per100(100),
   carbs100: per100(100),
   sugars100: per100(100),
+  saturatedFat100: per100(100),
+  fiber100: per100(100),
   /**
    * "off": the values are an untouched Open Food Facts import (the client says so; it's a provenance label, not a
    * security property). Anything else is recorded as typed by hand.

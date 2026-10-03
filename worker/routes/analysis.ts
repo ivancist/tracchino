@@ -42,7 +42,8 @@ async function loadCatalog(db: D1Database, productIds: number[], costMode: CostM
   const [products, purchases] = await db.batch<unknown>([
     db.prepare(
       `select id, name, brand, unit, package_amount as packageAmount, avg_piece_amount as avgPieceAmount,
-              kcal_100 as kcal100, protein_100 as protein100, fat_100 as fat100, carbs_100 as carbs100, sugars_100 as sugars100
+              kcal_100 as kcal100, protein_100 as protein100, fat_100 as fat100, carbs_100 as carbs100, sugars_100 as sugars100,
+              saturated_fat_100 as saturatedFat100, fiber_100 as fiber100
          from products where id in (select value from json_each(?))`,
     ).bind(ids),
     db.prepare(

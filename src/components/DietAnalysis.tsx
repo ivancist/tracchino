@@ -34,8 +34,10 @@ const MEASURE_LABELS: Record<Measure, string> = {
   kcal: "Energia",
   protein: "Proteine",
   fat: "Grassi",
+  saturatedFat: "di cui saturi",
   carbs: "Carboidrati",
   sugars: "Zuccheri",
+  fiber: "Fibre",
 };
 
 function measureText(m: Measure, v: number | null, signed = false): string {

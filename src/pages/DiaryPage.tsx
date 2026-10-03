@@ -105,8 +105,10 @@ export function DiaryPage() {
             <Tile label="Costo stimato" total={d.cost} format={formatCents} testId="total-cost" />
             <Tile label="Proteine" total={d.totals.protein} format={grams} testId="total-protein" />
             <Tile label="Grassi" total={d.totals.fat} format={grams} testId="total-fat" />
+            <Tile label="di cui saturi" total={d.totals.saturatedFat} format={grams} testId="total-saturated" />
             <Tile label="Carboidrati" total={d.totals.carbs} format={grams} testId="total-carbs" />
             <Tile label="di cui zuccheri" total={d.totals.sugars} format={grams} testId="total-sugars" />
+            <Tile label="Fibre" total={d.totals.fiber} format={grams} testId="total-fiber" />
           </div>
 
           {MEALS.map((meal) => {
