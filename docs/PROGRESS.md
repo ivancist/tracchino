@@ -10,7 +10,7 @@ Ultimo aggiornamento: 2026-10-03
 | 0 Setup e accesso | ✅ completa | sì |
 | 1 Spesa manuale | ✅ completa (audit + review) | sì |
 | 2 Statistiche | ✅ completa (audit + review) | sì (`9e62c5d`) |
-| 3 Scansione scontrino AI | 🟡 completa in locale, in verifica (branch `phase-3-scan`) | no |
+| 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
 | 4 Nutrizione e barcode | da fare | — |
 | 5 Diario | da fare | — |
 | 6 Analisi e simulazioni | da fare | — |
@@ -81,14 +81,20 @@ Ultimo aggiornamento: 2026-10-03
   - Aggiunti: test "una scansione non scrive su R2", e2e per la data non leggibile, negozio per indirizzo, tetto non consumato sui fallimenti.
   - Non coperto: test della compressione con foto ad alta entropia (il ciclo di riduzione non è esercitato; le foto reali escono a 196 KB e 135 KB).
 
-## Fase 3: da fare
+## Fase 3: in produzione (2026-10-03)
 
-1. Workers AI come riserva: **rimandato** (decisione del 2026-10-03, motivata in PLAN §5).
-2. Più scontrini per l'eval (obiettivo 5–10, catene diverse, sconti, prodotti a peso). Facoltativo: tarare la risoluzione.
-3. **Produzione** (chiedere l'ok all'utente):
-   - R2 è stato abilitato dall'utente: `npx wrangler r2 bucket create tracchino-receipts --jurisdiction eu`, poi verificare che non ci sia accesso pubblico (`r2 bucket dev-url get`);
-   - `wrangler secret put GEMINI_API_KEY` leggendo la chiave da `.dev.vars` tramite pipe, senza stamparla;
-   - backup D1 → `db:migrate:remote` (0002) → merge su `main` → deploy → smoke test → prova reale dal telefono.
+- Bucket R2 `tracchino-receipts` (UE) creato: `r2.dev` disabilitato, nessun dominio personalizzato.
+- Secret `GEMINI_API_KEY` impostato (pipe da `.dev.vars`, mai stampato).
+- Backup `backups/d1-2026-10-03-pre-0002.sql`, poi migrazione 0002 applicata in remoto.
+- Fast-forward di `main` a `ac6deac`, deploy (binding D1 e R2 UE presenti).
+- Smoke test senza login: `/`, `/api/me`, `/api/receipts`, `/api/receipts/1/photo`, `POST /api/receipts/scan` → 302 verso Access.
+
+### Ancora aperto
+1. Prova reale dal telefono da parte dell'utente: scansione → revisione → salvataggio → foto nel dettaglio.
+2. Più scontrini per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X"); poi eventuale taratura della risoluzione.
+3. Workers AI come riserva: rimandato (PLAN §5).
+
+## Prossimo: Fase 4 — Nutrizione e barcode
 
 ## Note operative
 
