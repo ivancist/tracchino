@@ -5,8 +5,8 @@ Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confe
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `9e3e7f1`** (versione Worker `561d182a`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
-- Migrazioni applicate in produzione: `0000`…`0004` (ultime: `0003_fiber_saturated`, `0004_salt`). **`0005_packages` pronta, non ancora in produzione** (vedi sotto). Backup pre-migrazione in `backups/` (gitignored).
+- **Produzione = `main` = `87bb24e`** (versione Worker `d8a5befc`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- Migrazioni applicate in produzione: `0000`…`0005` (ultime: `0004_salt`, `0005_packages`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–6 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
   - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
@@ -107,7 +107,7 @@ Ultimo aggiornamento: 2026-10-03 (confezioni distinte dai pezzi, porzione "Confe
 ### Ancora aperto
 1. Prova reale dal telefono da parte dell'utente: scansione → revisione → salvataggio → foto nel dettaglio.
 2. Più scontrini per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X"); poi eventuale taratura della risoluzione.
-3. Workers AI come riserva: rimandato (PLAN §5).
+2. Workers AI come riserva: rimandato (PLAN §5).
 
 ## Fase 4: fatto (branch `phase-4-nutrition`)
 
@@ -280,12 +280,12 @@ Correzione chiesta dall'utente dopo la versione precedente (sopra), che sommava 
 - Porzione "Confezione" automatica (`syncPackagePortion` in `worker/routes/products.ts`): alla creazione, o quando il peso della confezione cambia; segue il nuovo peso solo se coincideva col vecchio.
 - Test: 416 Vitest (nuovi `test/routes/package-portion.test.ts`, `totalPieces`, carote 1 × 500 g con 6 pezzi, uova 2 × 6 per negozio), 52 e2e (confezioni e pezzi nella revisione e nel salvato, uova 2 × 6, porzione "Confezione" nel diario). Mutazioni (peso × pezzi, unione che somma i pezzi) rilevate.
 - Eval reale ×2: 100% su prezzi, confezioni/pezzi, righe unite, prodotti, alias, totale.
+- In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0005-final.sql`, migrazione applicata (40 righe a 1 confezione, pezzi invariati, 27 "Confezione", nessun doppione), fast-forward di `main` a `87bb24e`, deploy, smoke test → 302.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
-1. Applicare `0005_packages` in produzione (con l'ok dell'utente; backup `backups/d1-2026-10-03-pre-0005.sql` già fatto) e fare il deploy.
-2. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
-3. Workers AI come riserva della scansione: rimandato (PLAN §5).
-4. Facoltativo: il bundle principale supera i 500 kB (warning di Vite); si può dividere per pagina con `lazy` nelle route.
+1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
+2. Workers AI come riserva della scansione: rimandato (PLAN §5).
+3. Facoltativo: il bundle principale supera i 500 kB (warning di Vite); si può dividere per pagina con `lazy` nelle route.
 
 ## Note operative
 
