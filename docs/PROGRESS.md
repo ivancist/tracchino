@@ -5,9 +5,9 @@ Ultimo aggiornamento: 2026-10-03 (Fase 7: lista della spesa e scorte)
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `8cd5f23`** (versione Worker `518b3b85`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
-- Migrazioni applicate in produzione: `0000`…`0005` (ultime: `0004_salt`, `0005_packages`). Backup pre-migrazione in `backups/` (gitignored).
-- Tutte le fasi 0–6 del piano sono online. Aggiunte successive, richieste dall'utente e online:
+- **Produzione = `main` = `fa0e13f`** (versione Worker `8a240c02`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- Migrazioni applicate in produzione: `0000`…`0006` (ultime: `0005_packages`, `0006_shopping_list`). Backup pre-migrazione in `backups/` (gitignored).
+- Tutte le fasi 0–7 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
   - diario: totali per pasto (kcal, costo, macro) e "↻ Ripeti" pasto precedente con modifiche (marca, quantità, togliere voci);
   - porzioni: una voce salvata conserva il peso della porzione di allora.
@@ -29,7 +29,7 @@ Ultimo aggiornamento: 2026-10-03 (Fase 7: lista della spesa e scorte)
 | 4 Nutrizione e barcode | ✅ completa (audit + review) | sì (`7e4ab67`) |
 | 5 Diario | ✅ completa (audit + review) | sì (`820286a`) |
 | 6 Analisi e simulazioni | ✅ completa (audit + review) | sì (`334df0d`) |
-| 7 Lista della spesa e scorte | ✅ completa (audit + review) | da applicare (migrazione 0006) |
+| 7 Lista della spesa e scorte | ✅ completa (audit + review) | sì (`fa0e13f`) |
 
 ## Fase 3: fatto (branch `phase-3-scan`)
 
@@ -300,6 +300,7 @@ Richiesta dell'utente; scelte dell'utente: scorta solo da acquisti nell'app (nes
 - `security-auditor`: SECURE, due LOW: tetto di 500 voci aggiunto; commento sulla lettura prima del batch corretto (utente singolo, accettato).
 - `phase-reviewer`: "non completa" per il tonno finito con meno di 3 giorni di diario, che non veniva suggerito. Corretto (scorta 0 → "finito" sempre). Corretti anche: unione di due prodotti entrambi in lista (una voce sola), etichette tagliate a 360 px. Aggiunti test: `costMode=last`, prodotto senza confezione, eliminazione a cascata.
 - Scala `verify` verde: 465 test, 54 e2e, build, segreti, config, migrazioni.
+- In produzione dal 2026-10-03, con l'ok dell'utente: backup `backups/d1-2026-10-03-pre-0006.sql`, migrazione applicata (tabella vuota, dati invariati), fast-forward di `main` a `fa0e13f`, deploy, smoke test (`/lista`, `/api/shopping-list`, `/api/pantry`, POST/DELETE) → 302.
 
 ## Tutte le fasi del piano sono in produzione. Ancora aperto
 1. Più scontrini reali per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X").
