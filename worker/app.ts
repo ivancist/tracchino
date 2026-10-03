@@ -4,6 +4,7 @@ import { accessAuth, remoteKeySet, sameOriginOnly, type AuthVariables, type KeyS
 import { chainRoutes } from "./routes/chains";
 import { groupRoutes } from "./routes/groups";
 import { meRoutes } from "./routes/me";
+import { createOffRoutes } from "./routes/off";
 import { productRoutes } from "./routes/products";
 import { receiptRoutes } from "./routes/receipts";
 import { createScanRoutes, type AiFactory } from "./routes/scan";
@@ -17,7 +18,7 @@ export type AppEnv = { Bindings: Env; Variables: AuthVariables };
 const geminiFromEnv: AiFactory = (env) =>
   env.GEMINI_API_KEY ? createGemini({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }) : null;
 
-export function createApp(options: { keySet?: KeySetFactory; ai?: AiFactory } = {}) {
+export function createApp(options: { keySet?: KeySetFactory; ai?: AiFactory; offFetch?: typeof fetch } = {}) {
   const app = new Hono<AppEnv>().basePath("/api");
 
   // Must stay first: no cross-site writes, and every /api route is authenticated.
@@ -32,6 +33,7 @@ export function createApp(options: { keySet?: KeySetFactory; ai?: AiFactory } = 
   app.route("/receipts/scan", createScanRoutes(options.ai ?? geminiFromEnv));
   app.route("/receipts", receiptRoutes);
   app.route("/stats", statsRoutes);
+  app.route("/off", createOffRoutes(options.offFetch));
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

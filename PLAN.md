@@ -132,6 +132,13 @@ Aliases per **catena** e non per singolo negozio: lo stesso Esselunga in due cit
 - Scansione barcode dalla fotocamera: `BarcodeDetector` nativo, con `@zxing/browser` come fallback (Safari iOS).
 - Proxy `/api/off/:barcode` verso Open Food Facts: nome, marca, valori per 100 g, salvati come precompilazione da confermare.
 - Inserimento manuale dei valori per i prodotti sfusi.
+- Decisioni (2026-10-03):
+  - Il barcode si valida con la cifra di controllo (EAN-8/13, UPC-A/E, GTIN-14) sia nel form sia nell'API.
+  - Un codice già nel catalogo apre quel prodotto (o lo usa nella riga dello scontrino) senza interrogare OFF.
+  - I dati OFF riempiono solo i campi vuoti; i valori nutrizionali si sostituiscono solo su richiesta esplicita.
+  - `nutrition_source = 'off'` finché i valori importati restano invariati; una modifica a mano → `manual`.
+  - Gli avvisi di plausibilità sono informativi e non bloccano il salvataggio: le etichette possono essere strane (fibre, polioli). Tolleranza kcal: 20% o 20 kcal.
+  - zxing si carica solo quando la fotocamera si apre su un browser senza `BarcodeDetector`.
 - **Verifiche**: test del mapping da risposta OFF a prodotto (con campi mancanti, valori in kJ, unità ml); controllo di plausibilità dei valori (macro per 100 g ≤ 100 g; kcal ≈ 4·P + 9·G + 4·C con tolleranza → avviso).
 
 ### Fase 5 — Diario alimentare

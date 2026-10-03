@@ -120,8 +120,8 @@ describe("products", () => {
   });
 
   it("rejects duplicate barcodes", async () => {
-    await api.product({ name: "A", barcode: "8001234567890" });
-    expect((await api.post("/api/products", { name: "B", unit: "g", barcode: "8001234567890" })).status).toBe(409);
+    await api.product({ name: "A", barcode: "8001234567897" });
+    expect((await api.post("/api/products", { name: "B", unit: "g", barcode: "8001234567897" })).status).toBe(409);
   });
 
   it("refuses to delete a product used in receipts (409), allows deleting an unused one", async () => {
@@ -136,7 +136,7 @@ describe("products", () => {
     const chainId = await api.chain("Esselunga");
     const storeId = await api.store({ chainId });
     const keep = await api.product({ name: "Banane Chiquita", avgPieceAmount: 120 });
-    const dup = await api.product({ name: "Banane chiq.", brand: "Chiquita", barcode: "123", kcal100: 89, protein100: 1.1 });
+    const dup = await api.product({ name: "Banane chiq.", brand: "Chiquita", barcode: "96385074", kcal100: 89, protein100: 1.1 });
     await api.receipt({ storeId, items: [{ productId: dup, priceFullCents: 199 }, { productId: keep, priceFullCents: 189 }] });
 
     expect((await api.post(`/api/products/${dup}/merge`, { intoId: keep })).status).toBe(200);
@@ -146,7 +146,7 @@ describe("products", () => {
     expect(merged).toMatchObject({
       name: "Banane Chiquita", // target name kept
       brand: "Chiquita", // filled from source
-      barcode: "123", // moved from source
+      barcode: "96385074", // moved from source
       avgPieceAmount: 120,
       kcal100: 89,
       protein100: 1.1,

@@ -41,6 +41,7 @@ export type Product = {
   fat100: number | null;
   carbs100: number | null;
   sugars100: number | null;
+  nutritionSource: "off" | "manual" | null;
   purchaseCount: number;
   lastPurchaseDate: string | null;
 };
@@ -126,6 +127,11 @@ export type TopProduct = {
   days: number;
   avgIntervalDays: number | null;
 };
+
+/** GET /api/off/:barcode: a product already in the catalog, or a prefill from Open Food Facts. */
+export type OffLookup =
+  | { existingProductId: number; prefill: null }
+  | { existingProductId: null; prefill: import("./off").OffPrefill };
 
 export type MatchStatus = "alias" | "proposed" | "uncertain" | "none";
 

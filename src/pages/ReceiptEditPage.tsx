@@ -483,6 +483,10 @@ function ReceiptEditor({ receipt, scan }: { receipt: ReceiptDetail | null; scan:
           <ProductForm
             initialName={creatingProduct.name}
             onCancel={() => setCreatingProduct(null)}
+            onUseExisting={(id) => {
+              chooseProduct(creatingProduct.lineKey, id);
+              setCreatingProduct(null);
+            }}
             onSaved={(id) => {
               // The save resolves after the product list has refetched, so the line can point at it right away.
               chooseProduct(creatingProduct.lineKey, id);

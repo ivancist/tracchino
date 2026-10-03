@@ -4,6 +4,7 @@ import type {
   Created,
   LastPrice,
   MeResponse,
+  OffLookup,
   PriceStats,
   ScanResult,
   SpendingStats,
@@ -127,6 +128,9 @@ export const usePriceStats = (kind: "products" | "groups", id: number | null) =>
     queryFn: () => api.get<PriceStats>(`/api/stats/${kind}/${id}`),
     enabled: id != null,
   });
+
+/** Barcode → product already in the catalog, or a prefill from Open Food Facts (404 when OFF doesn't know it). */
+export const lookupBarcode = (code: string) => api.get<OffLookup>(`/api/off/${code}`);
 
 export const scanReceipt = (photo: Blob) => api.post<ScanResult>("/api/receipts/scan", photo);
 

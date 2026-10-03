@@ -61,7 +61,14 @@ export function Dialog({ open, title, onClose, children }: { open: boolean; titl
   }, [open]);
   return createPortal(
     // React events bubble through portals: stop submits here so they never reach a form around <Dialog>.
-    <dialog ref={ref} className="dialog" onClose={onClose} aria-label={title} onSubmit={(e) => e.stopPropagation()}>
+    // A nested dialog's "close" also bubbles here through the React tree: react only to this dialog's own close.
+    <dialog
+      ref={ref}
+      className="dialog"
+      onClose={(e) => e.target === e.currentTarget && onClose()}
+      aria-label={title}
+      onSubmit={(e) => e.stopPropagation()}
+    >
       {open && (
         <>
           <header className="dialog-header">

@@ -12,7 +12,7 @@ const PRODUCT_SELECT = `
   select p.id, p.name, p.brand, p.group_id as groupId, g.name as groupName, p.barcode, p.unit,
          p.package_amount as packageAmount, p.avg_piece_amount as avgPieceAmount,
          p.kcal_100 as kcal100, p.protein_100 as protein100, p.fat_100 as fat100,
-         p.carbs_100 as carbs100, p.sugars_100 as sugars100,
+         p.carbs_100 as carbs100, p.sugars_100 as sugars100, p.nutrition_source as nutritionSource,
          count(ri.id) as purchaseCount, max(r.date) as lastPurchaseDate
     from products p
     left join product_groups g on g.id = p.group_id
@@ -26,16 +26,16 @@ type ParsedProduct = ReturnType<typeof productInput.parse>;
 type NutritionSource = "off" | "manual" | null;
 
 /**
- * Nutrition source after a write: none → null; values unchanged from an Open Food Facts import → keep "off";
- * anything typed or edited by hand → "manual".
+ * Nutrition source after a write: none → null; a fresh Open Food Facts import (declared by the client) or values
+ * unchanged from a previous import → "off"; anything typed or edited by hand → "manual".
  */
 function toRow(input: ParsedProduct, previous?: Pick<typeof products.$inferSelect, NutritionKey | "nutritionSource">) {
-  const hasNutrition = NUTRITION_KEYS.some((k) => input[k] != null);
+  const { nutritionSource: declared, ...values } = input;
+  const hasNutrition = NUTRITION_KEYS.some((k) => values[k] != null);
   let nutritionSource: NutritionSource = hasNutrition ? "manual" : null;
-  if (hasNutrition && previous?.nutritionSource === "off" && NUTRITION_KEYS.every((k) => input[k] === previous[k])) {
-    nutritionSource = "off";
-  }
-  return { ...input, nutritionSource };
+  const unchangedImport = previous?.nutritionSource === "off" && NUTRITION_KEYS.every((k) => values[k] === previous[k]);
+  if (hasNutrition && (declared === "off" || unchangedImport)) nutritionSource = "off";
+  return { ...values, nutritionSource };
 }
 
 async function loadProduct(env: Env, id: number): Promise<Product | null> {

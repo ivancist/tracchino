@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { Product } from "../../shared/api";
 import { PriceSection } from "../components/PriceSection";
-import { ProductForm } from "../components/ProductForm";
+import { ProductForm, type BarcodeStart } from "../components/ProductForm";
 import { ProductPicker, productLabel } from "../components/ProductPicker";
 import { ConfirmButton, ErrorText, PageHeader, QueryState } from "../components/ui";
 import { useDeleteProduct, useMergeProduct, useProducts } from "../queries";
@@ -11,6 +11,9 @@ export function ProductEditPage() {
   const params = useParams();
   const id = params.id ? Number(params.id) : null;
   const navigate = useNavigate();
+  const location = useLocation();
+  // New product opened from a barcode scan on the products list (lookup already done there).
+  const start = id == null ? ((location.state as { barcode?: BarcodeStart } | null)?.barcode ?? undefined) : undefined;
   const products = useProducts();
   const remove = useDeleteProduct();
   const merge = useMergeProduct();
@@ -31,7 +34,13 @@ export function ProductEditPage() {
     <>
       <PageHeader title={product ? productLabel(product) : "Nuovo prodotto"} back={back} />
       {product && <PriceSection product={product} />}
-      <ProductForm key={product?.id ?? "new"} product={product} onSaved={() => navigate("/prodotti")} />
+      <ProductForm
+        key={product?.id ?? `new-${start?.barcode ?? ""}`}
+        product={product}
+        start={start}
+        onSaved={() => navigate("/prodotti")}
+        onUseExisting={(existingId) => navigate(`/prodotti/${existingId}`)}
+      />
 
       {product && (
         <section className="card danger-zone">

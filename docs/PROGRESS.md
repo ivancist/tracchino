@@ -1,7 +1,7 @@
 # Stato di avanzamento
 
 Leggere questo file all'inizio di una nuova sessione, insieme a `CLAUDE.md` e `PLAN.md`.
-Ultimo aggiornamento: 2026-10-03
+Ultimo aggiornamento: 2026-10-03 (Fase 4)
 
 ## Fasi
 
@@ -11,7 +11,7 @@ Ultimo aggiornamento: 2026-10-03
 | 1 Spesa manuale | ✅ completa (audit + review) | sì |
 | 2 Statistiche | ✅ completa (audit + review) | sì (`9e62c5d`) |
 | 3 Scansione scontrino AI | ✅ completa (audit + review; Workers AI rimandato) | sì (`ac6deac`) |
-| 4 Nutrizione e barcode | da fare | — |
+| 4 Nutrizione e barcode | 🟡 completa in locale, in verifica (branch `phase-4-nutrition`) | no |
 | 5 Diario | da fare | — |
 | 6 Analisi e simulazioni | da fare | — |
 
@@ -94,7 +94,50 @@ Ultimo aggiornamento: 2026-10-03
 2. Più scontrini per l'eval (obiettivo 5–10: catene diverse, sconti, prodotti a peso, righe "2 X"); poi eventuale taratura della risoluzione.
 3. Workers AI come riserva: rimandato (PLAN §5).
 
-## Prossimo: Fase 4 — Nutrizione e barcode
+## Fase 4: fatto (branch `phase-4-nutrition`)
+
+- `shared/barcode.ts`: `isValidGtin` (cifra di controllo; UPC-E espanso) e `cleanBarcode`.
+- `shared/off.ts`: `mapOffProduct`, risposta OFF v2 → precompilazione.
+  - Nome (it, poi generico), prima marca, formato da `product_quantity` o dal testo ("1,5 L", "33cl", "6 x 125 g").
+  - kcal, oppure kJ / 4,184; numeri come stringhe con la virgola.
+  - Valori impossibili scartati con avviso.
+- `shared/nutrition.ts`: `nutritionWarnings` (macro > 100 g, somma > 100 g, zuccheri > carboidrati, kcal ≠ 4P + 9G + 4C oltre il 20% o 20 kcal).
+- `GET /api/off/:barcode` (`worker/routes/off.ts`):
+  - codice già in catalogo → `existingProductId`, senza chiamare OFF;
+  - altrimenti OFF v2 con i soli campi utili, User-Agent identificativo (solo l'URL del repo), timeout 8 s;
+  - errori: 404 se OFF non conosce il codice, 502 per errori o assenza di risposta, 400 per codice non valido. `createApp({ offFetch })` per i test.
+- Schema prodotto: `barcode` validato e ripulito; `nutritionSource: "off"` dichiarato dal client solo per valori OFF invariati. `Product.nutritionSource` esposto.
+- UI:
+  - `BarcodeScanner`: `BarcodeDetector`, oppure zxing (chunk separato, circa 120 KB gzip) da `getUserMedia`, oppure codice digitato; la fotocamera si chiude sempre.
+  - Pagina Prodotti "📷 Barcode": codice noto → prodotto; nuovo → form precompilato da OFF (stato di navigazione); assente → form con avviso.
+  - `ProductForm`: campo barcode con Scansiona / Cerca, «Usa X» se il codice esiste già (anche dalla riga dello scontrino), avvisi di plausibilità in tempo reale, "Fonte: Open Food Facts / modificati a mano".
+  - Header delle pagine: a 360 px i pulsanti vanno sotto il titolo invece di spezzarlo.
+- Test: `test/shared/off-nutrition.test.ts` (28), `test/routes/off.test.ts` (8), `e2e/barcode.spec.ts` (6 × 2).
+  - L'e2e comprende zxing che decodifica un EAN-13 vero disegnato sulla fotocamera finta, cioè il percorso di Safari iOS.
+  - Mutation test sulla fonte OFF: rilevato.
+- Verifica reale una tantum con Nutella (3017620422003): il formato della risposta corrisponde; un codice sconosciuto → 404.
+- Nessuna migrazione: lo schema aveva già barcode, valori e `nutrition_source`.
+
+### Verifiche del 2026-10-03
+- Scala `verify` verde: 322 test, 40 e2e, build, scansione dei segreti, config, migrazioni.
+- `security-auditor`: SECURE, solo punti LOW. Corretti:
+  - la fotocamera restava accesa se il dialog si chiudeva mentre il browser chiedeva il permesso;
+  - OFF: i redirect non vengono seguiti e la risposta è limitata a 512 KB.
+- `phase-reviewer`: completa. Corretti:
+  - `""` da OFF diventava 0 (ora `null`);
+  - una ricerca lenta poteva sovrascrivere valori appena digitati;
+  - unità ml senza formato;
+  - 200 non-JSON → 502 invece di 404; messaggio per il 429;
+  - UPC-E normalizzato a 13 cifre;
+  - "1.000 g", "1 litro", "500 grammi";
+  - parametro della route validato con lo schema Zod `barcodeCode`.
+- Rischio "barcode non validi già salvati" verificato: in produzione non ci sono prodotti.
+- Bug trovato dall'e2e: chiudere un dialog annidato (scanner) chiudeva anche quello esterno (nuovo prodotto), perché l'evento `close` risale l'albero React. Ora `Dialog` reagisce solo alla propria chiusura.
+
+## Fase 4: da fare
+1. Merge, deploy (nessuna migrazione), smoke test.
+2. Prova reale dall'iPhone: zxing con la fotocamera vera, permesso fotocamera su `workers.dev`.
+
 
 ## Note operative
 

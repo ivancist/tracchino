@@ -1,16 +1,43 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { formatIsoDate } from "../../shared/dates";
 import { formatAmount } from "../../shared/quantity";
 import { rankByQuery } from "../../shared/text";
+import { BarcodeScanner } from "../components/BarcodeScanner";
 import { GroupsSection } from "../components/GroupsSection";
+import type { BarcodeStart } from "../components/ProductForm";
 import { productLabel } from "../components/ProductPicker";
-import { PageHeader, QueryState } from "../components/ui";
-import { useProducts } from "../queries";
+import { ApiError, errorMessage } from "../api";
+import { ErrorText, PageHeader, QueryState } from "../components/ui";
+import { lookupBarcode, useProducts } from "../queries";
 
 export function ProductsPage() {
   const products = useProducts();
   const [query, setQuery] = useState("");
+  const navigate = useNavigate();
+  const [scanning, setScanning] = useState(false);
+  const [looking, setLooking] = useState(false);
+  const [scanError, setScanError] = useState<unknown>(null);
+
+  /** Known barcode → its product; unknown → new product, prefilled from Open Food Facts when it has the code. */
+  async function onBarcode(code: string) {
+    setScanning(false);
+    setLooking(true);
+    setScanError(null);
+    try {
+      const lookup = await lookupBarcode(code);
+      if (lookup.existingProductId != null) return navigate(`/prodotti/${lookup.existingProductId}`);
+      navigate("/prodotti/nuovo", { state: { barcode: { barcode: code, lookup } satisfies BarcodeStart } });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        navigate("/prodotti/nuovo", { state: { barcode: { barcode: code, lookup: null, message: err.message } satisfies BarcodeStart } });
+      } else {
+        setScanError(errorMessage(err));
+      }
+    } finally {
+      setLooking(false);
+    }
+  }
 
   const visible = useMemo(() => {
     const all = products.data ?? [];
@@ -22,11 +49,18 @@ export function ProductsPage() {
       <PageHeader
         title="Prodotti"
         action={
-          <Link to="/prodotti/nuovo" className="button primary">
-            + Nuovo
-          </Link>
+          <div className="actions">
+            <button type="button" className="button" disabled={looking} onClick={() => setScanning(true)}>
+              {looking ? "Ricerca…" : "📷 Barcode"}
+            </button>
+            <Link to="/prodotti/nuovo" className="button primary">
+              + Nuovo
+            </Link>
+          </div>
         }
       />
+      <ErrorText error={scanError} />
+      <BarcodeScanner open={scanning} onClose={() => setScanning(false)} onDetected={onBarcode} />
       <input
         className="input search"
         type="search"

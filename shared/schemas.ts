@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cleanBarcode, isValidGtin, normalizeGtin } from "./barcode";
 import { isValidIsoDate } from "./dates";
 import { PRODUCT_UNITS } from "./types";
 
@@ -39,11 +40,24 @@ export type GroupInput = z.input<typeof groupInput>;
 
 const per100 = (max: number) => z.number().min(0).max(max).nullish().transform((v) => v ?? null);
 
+const BARCODE_MESSAGE = "Codice a barre non valido (controlla le cifre)";
+
+/** A scanned or typed EAN/UPC code: digits only, valid check digit, canonical form (UPC-E expanded). */
+export const barcodeCode = z.string().transform(cleanBarcode).refine(isValidGtin, BARCODE_MESSAGE).transform(normalizeGtin);
+
+/** Product barcode: like `barcodeCode`, but optional (empty → null). */
+export const barcode = z
+  .string()
+  .nullish()
+  .transform((s) => (s ? cleanBarcode(s) : ""))
+  .refine((s) => s === "" || isValidGtin(s), BARCODE_MESSAGE)
+  .transform((s) => (s ? normalizeGtin(s) : null));
+
 export const productInput = z.object({
   name: requiredText(120),
   brand: optionalText(80),
   groupId: optionalPositiveInt,
-  barcode: optionalText(32),
+  barcode,
   unit: z.enum(PRODUCT_UNITS),
   packageAmount: optionalPositiveInt,
   avgPieceAmount: optionalPositiveInt,
@@ -52,6 +66,11 @@ export const productInput = z.object({
   fat100: per100(100),
   carbs100: per100(100),
   sugars100: per100(100),
+  /**
+   * "off": the values are an untouched Open Food Facts import (the client says so; it's a provenance label, not a
+   * security property). Anything else is recorded as typed by hand.
+   */
+  nutritionSource: z.enum(["off", "manual"]).nullish().transform((v) => v ?? null),
 });
 export type ProductInput = z.input<typeof productInput>;
 
