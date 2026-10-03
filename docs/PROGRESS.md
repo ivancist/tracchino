@@ -5,7 +5,7 @@ Ultimo aggiornamento: 2026-10-03 (righe uguali unite nella scansione)
 
 ## Riprendere da qui
 
-- **Produzione = `main` = `ca936b8`** (versione Worker `fa2ffa82`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
+- **Produzione = `main` = `9e3e7f1`** (versione Worker `561d182a`). Nessun branch aperto: si lavora su un branch nuovo e si fa fast-forward su `main`.
 - Migrazioni applicate in produzione: `0000`…`0004` (ultime: `0003_fiber_saturated`, `0004_salt`). Backup pre-migrazione in `backups/` (gitignored).
 - Tutte le fasi 0–6 del piano sono online. Aggiunte successive, richieste dall'utente e online:
   - valori nutrizionali: grassi saturi, fibre e sale (form, OFF, diario, analisi);
